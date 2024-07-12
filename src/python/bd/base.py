@@ -9,8 +9,7 @@ usuario = "root"
 password = ""
 ruta = "127.0.0.1"
 puerto = "3306"
-
-nombre_bd = "login"
+nombre_bd = "asap"
 
 engine = create_engine(f"mysql+pymysql://{usuario}:{password}@{ruta}:{puerto}/{nombre_bd}")
 

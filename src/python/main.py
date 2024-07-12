@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from typing import Union
 from pydantic import BaseModel,Field
-from fastapi import FastAPI
+from fastapi import FastAPI,HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from bd.base import Base,session
 import string
@@ -19,12 +19,12 @@ app = FastAPI()
 
 origins = [
     "http://localhost:5173",
-    "http://localhost:8080"
+    "http://localhost:8000"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Permitir todas las solicitudes de origen. Para mayor seguridad, especifica los dominios permitidos.
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,17 +46,47 @@ class registro(BaseModel):
 class recuperar(BaseModel):
     correo: str
 
+class BuscarEmpresaRequest(BaseModel):
+    query: str
+
+class EmpresaSchema(BaseModel):
+    id_empresas: int
+    nombre: str
+
+    class Config:
+        orm_mode = True
+
+class PlanCuentasSchema(BaseModel):
+    id_plan_cuentas: int
+    codigo: int
+    descripcion_cuenta: str
+
+    class Config:
+        orm_mode = True
+
+class ErrorMessage(BaseModel):
+    message: str
 
 @app.get("/")
 async def index():
     
     return "hola mundo!"
 
+@app.post("/buscar-empresas", response_model=list[EmpresaSchema])
+def buscar_empresas(request: BuscarEmpresaRequest):
+    empresas = session.query(Empresas).filter(Empresas.nombre.ilike(f"%{request.query}%")).all()
+    if not empresas:
+        raise HTTPException(status_code=404, detail="No companies found")
+    return empresas
 
-@app.get("/empresas")
-async def empresas():
-    
-    return "ola"
+
+@app.post("/empresas/{empresa_id}/planes", response_model=Union[list[PlanCuentasSchema], ErrorMessage])
+def get_planes_de_cuentas(empresa_id: int):
+    planes = session.query(PlanCuentas).filter(PlanCuentas.registro_empresas == empresa_id).all()
+    if not planes:
+        return {"message": "No se encontró plan"}
+    return planes
+
 
 """@app.post("/login/")
 async def otro(objeto: Item):
@@ -150,7 +180,7 @@ async def registro(archivo : registro):
     else:
         return {"falso": False}
 """
-"""@app.post("/recuperacion")"""
+"""@app.post("/recuperacion")
 async def recuperacion(archivo:recuperar):
 
 
@@ -185,4 +215,4 @@ async def recuperacion(archivo:recuperar):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=contexto) as smtp:
             smtp.login(email_sender, password)
             smtp.sendmail(email_sender, email_reciver, em.as_string())
-        return {"data": correo_final}
+        return {"data": correo_final}"""
