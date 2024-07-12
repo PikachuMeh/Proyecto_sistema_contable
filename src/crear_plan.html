@@ -2,9 +2,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Crear Plan de Cuentas</title>
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/crear_plan.js"></script>
 </head>
 <body>
-    
+    <h1>Crear Plan de Cuentas</h1>
+    <form id="crear-plan-form">
+        <label for="codigo_cuenta">Código de Cuenta:</label>
+        <input type="number" id="codigo_cuenta" name="codigo_cuenta" required><br><br>
+
+        <label for="descripcion_cuenta">Descripción de la Cuenta:</label>
+        <input type="text" id="descripcion_cuenta" name="descripcion_cuenta" required><br><br>
+
+        <label for="nombre_cuenta">Nombre de la Cuenta:</label>
+        <input type="text" id="nombre_cuenta" name="nombre_cuenta" required><br><br>
+
+        <label for="nivel_cuenta">Nivel de la Cuenta:</label>
+        <input type="number" id="nivel_cuenta" name="nivel_cuenta" required><br><br>
+
+        <label for="tipo_cuenta">Tipo de Cuenta:</label>
+        <input type="text" id="tipo_cuenta" name="tipo_cuenta" required><br><br>
+
+        <label for="saldo_normal">Saldo Normal:</label>
+        <input type="text" id="saldo_normal" name="saldo_normal" required><br><br>
+
+        <button type="submit">Crear Cuenta</button>
+    </form>
+
+    <div id="cuenta-resumen" style="margin-top: 20px;">
+        <!-- Aquí se mostrará el resumen de la cuenta -->
+    </div>
 </body>
 </html>

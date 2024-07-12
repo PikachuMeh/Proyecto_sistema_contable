@@ -67,6 +67,15 @@ class PlanCuentasSchema(BaseModel):
 class ErrorMessage(BaseModel):
     message: str
 
+class PlanCuentaCreate(BaseModel):
+    codigo_cuenta: str
+    descripcion_cuenta: str
+    nombre_cuenta: str
+    nivel_cuenta: int
+    tipo_cuenta: str
+    saldo_normal: str
+    estado: str
+
 @app.get("/")
 async def index():
     
@@ -87,6 +96,22 @@ def get_planes_de_cuentas(empresa_id: int):
         return {"message": "No se encontró plan"}
     return planes
 
+@app.post("/crear-plan-cuenta")
+def crear_plan_cuenta(plan_cuenta: PlanCuentaCreate):
+    # Aquí se puede agregar la lógica para validar y guardar la nueva cuenta en la base de datos
+    # Ejemplo básico:
+    nueva_cuenta = PlanCuentas(
+        codigo_cuenta=plan_cuenta.codigo_cuenta,
+        descripcion_cuenta=plan_cuenta.descripcion_cuenta,
+        nombre_cuenta=plan_cuenta.nombre_cuenta,
+        nivel_cuenta=plan_cuenta.nivel_cuenta,
+        tipo_cuenta=plan_cuenta.tipo_cuenta,
+        saldo_normal=plan_cuenta.saldo_normal,
+        estado=plan_cuenta.estado
+    )
+    session.add(nueva_cuenta)
+    session.commit()
+    return {"message": "Cuenta creada con éxito"}
 
 """@app.post("/login/")
 async def otro(objeto: Item):
