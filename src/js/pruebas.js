@@ -38,11 +38,10 @@ $(function () {
                 method: 'POST',
                 contentType: 'application/json',
                 success: function (response) {
-                    if (response.message) {
-                        alert(response.message);
-                        showCreatePlanButton();
+                    if (response.length > 0) {
+                        displayPlanesDeCuentas(response); // Mostrar los planes de cuentas existentes
                     } else {
-                        displayPlanesDeCuentas(response);
+                        showCreatePlanButton(); // Mostrar el botón para crear un nuevo plan
                     }
                 },
                 error: function (error) {
@@ -55,15 +54,17 @@ $(function () {
     function displayPlanesDeCuentas(planes) {
         const planesDiv = $("#planes-de-cuentas");
         planesDiv.empty();
-        if (planes.length === 0) {
-            planesDiv.append("<p>No se encontraron planes de cuentas.</p>");
-            showCreatePlanButton();
-        } else {
-            planes.forEach(plan => {
-                const planDiv = $(`<div>${plan.descripcion_cuenta}</div>`);
-                planesDiv.append(planDiv);
-            });
-        }
+        planes.forEach(plan => {
+            const planDiv = $(`
+                <div>
+                    <p><strong>Código:</strong> ${plan.codigo}</p>
+                    <p><strong>Descripción:</strong> ${plan.descripcion_cuenta}</p>
+                    <p><strong>Estado:</strong> ${plan.estado}</p>
+                    <!-- Agrega más detalles del plan de cuentas según sea necesario -->
+                </div>
+            `);
+            planesDiv.append(planDiv);
+        });
     }
 
     function showCreatePlanButton() {
@@ -71,6 +72,6 @@ $(function () {
         createButton.click(function () {
             window.location.href = 'crear_plan.html';
         });
-        $("#planes-de-cuentas").append(createButton);
+        $("#planes-de-cuentas").empty().append(createButton);
     }
 });

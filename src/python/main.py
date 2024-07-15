@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from typing import Union
 from pydantic import BaseModel,Field
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI,HTTPException,Depends
 from fastapi.middleware.cors import CORSMiddleware
 from bd.base import Base,session
 import string
@@ -70,16 +70,13 @@ class EmpresaSchema(BaseModel):
     class Config:
         orm_mode = True
 
-class PlanCuentasSchema(BaseModel):
-    id_plan_cuentas: int
-    codigo: int
-    descripcion_cuenta: str
 
     class Config:
         orm_mode = True
 
 class ErrorMessage(BaseModel):
     message: str
+    
     
 class CuentaContableSchema(BaseModel):
     codigo_cuenta: str
@@ -91,7 +88,7 @@ class CuentaContableSchema(BaseModel):
     fecha: str
     estado: str
     documento_respaldo: str
-    
+        
 @app.get("/")
 async def index():
     
@@ -165,6 +162,14 @@ def crear_cuentas_y_plan(empresa_id: int, cuentas: list[CuentaContableSchema]):
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
+    
+
+@app.get("/empresas/{empresa_id}/planes")
+def obtener_planes(empresa_id: int):
+    planes = session.query(PlanCuentas).filter(PlanCuentas.registro_empresas == empresa_id).all()
+    if not planes:
+        raise HTTPException(status_code=404, detail="No se encontraron planes de cuentas para la empresa especificada")
+    return planes
 
 @app.post("/login/")
 async def otro(objeto: Item):
