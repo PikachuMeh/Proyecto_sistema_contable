@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,31 +8,24 @@
     <script src="js/crear_plan.js"></script>
 </head>
 <body>
-    <h1>Crear Plan de Cuentas</h1>
+    <h1>Crear Plan de Cuentas para <span id="empresa-nombre"></span></h1>
     <form id="crear-plan-form">
-        <label for="codigo_cuenta">Código de Cuenta:</label>
-        <input type="number" id="codigo_cuenta" name="codigo_cuenta" required><br><br>
-
-        <label for="descripcion_cuenta">Descripción de la Cuenta:</label>
-        <input type="text" id="descripcion_cuenta" name="descripcion_cuenta" required><br><br>
-
-        <label for="nombre_cuenta">Nombre de la Cuenta:</label>
-        <input type="text" id="nombre_cuenta" name="nombre_cuenta" required><br><br>
-
-        <label for="nivel_cuenta">Nivel de la Cuenta:</label>
-        <input type="number" id="nivel_cuenta" name="nivel_cuenta" required><br><br>
-
-        <label for="tipo_cuenta">Tipo de Cuenta:</label>
-        <input type="text" id="tipo_cuenta" name="tipo_cuenta" required><br><br>
-
-        <label for="saldo_normal">Saldo Normal:</label>
-        <input type="text" id="saldo_normal" name="saldo_normal" required><br><br>
-
-        <button type="submit">Crear Cuenta</button>
+        <label for="codigo-cuenta">Código de Cuenta:</label>
+        <input type="text" id="codigo-cuenta" name="codigo_cuenta"><br>
+        <label for="descripcion-cuenta">Descripción de la Cuenta:</label>
+        <input type="text" id="descripcion-cuenta" name="descripcion_cuenta"><br>
+        <label for="nombre-cuenta">Nombre de la Cuenta:</label>
+        <input type="text" id="nombre-cuenta" name="nombre_cuenta"><br>
+        <label for="nivel-cuenta">Nivel de la Cuenta:</label>
+        <input type="text" id="nivel-cuenta" name="nivel_cuenta"><br>
+        <label for="tipo-cuenta">Tipo de Cuenta:</label>
+        <input type="text" id="tipo-cuenta" name="tipo_cuenta"><br>
+        <label for="saldo-normal">Saldo Normal:</label>
+        <input type="text" id="saldo-normal" name="saldo_normal"><br>
+        <button type="button" id="add-cuenta-btn">Agregar Cuenta</button>
     </form>
-
-    <div id="cuenta-resumen" style="margin-top: 20px;">
-        <!-- Aquí se mostrará el resumen de la cuenta -->
-    </div>
+    <h2>Cuentas Agregadas</h2>
+    <ul id="cuentas-list"></ul>
+    <button id="crear-plan-btn">Crear Plan de Cuentas</button>
 </body>
 </html>

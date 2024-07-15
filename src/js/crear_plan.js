@@ -1,60 +1,75 @@
-$(document).ready(function() {
-    $("#crear-plan-form").submit(function(event) {
-        event.preventDefault();
+$(function () {
+    const empresaSeleccionada = JSON.parse(localStorage.getItem('empresaSeleccionada'));
+    if (empresaSeleccionada) {
+        $("#empresa-nombre").text(empresaSeleccionada.nombre);
+    }
 
-        const codigoCuenta = $("#codigo_cuenta").val().trim();
-        const descripcionCuenta = $("#descripcion_cuenta").val().trim();
-        const nombreCuenta = $("#nombre_cuenta").val().trim();
-        const nivelCuenta = $("#nivel_cuenta").val().trim();
-        const tipoCuenta = $("#tipo_cuenta").val().trim();
-        const saldoNormal = $("#saldo_normal").val().trim();
+    let cuentas = [];
 
-        if (!codigoCuenta || !descripcionCuenta || !nombreCuenta || !nivelCuenta || !tipoCuenta || !saldoNormal) {
-            alert("Todos los campos son requeridos.");
+    $("#add-cuenta-btn").click(function () {
+        const cuenta = {
+            codigo_cuenta: $("#codigo-cuenta").val(),
+            descripcion_cuenta: $("#descripcion-cuenta").val(),
+            nombre_cuenta: $("#nombre-cuenta").val(),
+            nivel_cuenta: $("#nivel-cuenta").val(),
+            tipo_cuenta: $("#tipo-cuenta").val(),
+            saldo_normal: $("#saldo-normal").val(),
+            estado: "abierto"
+        };
+
+        // Validar que el código de cuenta no se repita
+        if (cuentas.some(c => c.codigo_cuenta === cuenta.codigo_cuenta)) {
+            alert("El código de cuenta ya existe.");
             return;
         }
 
-        // Mostrar el resumen de la cuenta
-        const cuentaResumen = `
-            <h2>Resumen de la Cuenta</h2>
-            <p><strong>Código de Cuenta:</strong> ${codigoCuenta}</p>
-            <p><strong>Descripción de la Cuenta:</strong> ${descripcionCuenta}</p>
-            <p><strong>Nombre de la Cuenta:</strong> ${nombreCuenta}</p>
-            <p><strong>Nivel de la Cuenta:</strong> ${nivelCuenta}</p>
-            <p><strong>Tipo de Cuenta:</strong> ${tipoCuenta}</p>
-            <p><strong>Saldo Normal:</strong> ${saldoNormal}</p>
-            <button id="confirmar-creacion">Confirmar Creación</button>
-        `;
-        $("#cuenta-resumen").html(cuentaResumen);
+        // Validar que el nombre de la cuenta no se repita
+        if (cuentas.some(c => c.nombre_cuenta === cuenta.nombre_cuenta)) {
+            alert("El nombre de la cuenta ya existe.");
+            return;
+        }
 
-        // Manejar la confirmación de creación
-        $("#confirmar-creacion").click(function() {
-            const cuentaData = {
-                codigo_cuenta: codigoCuenta,
-                descripcion_cuenta: descripcionCuenta,
-                nombre_cuenta: nombreCuenta,
-                nivel_cuenta: nivelCuenta,
-                tipo_cuenta: tipoCuenta,
-                saldo_normal: saldoNormal,
-                estado: 'abierto'
-            };
+        cuentas.push(cuenta);
+        updateCuentasList();
+        clearForm();
+    });
 
-            $.ajax({
-                url: 'http://localhost:9000/crear-plan-cuenta',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(cuentaData),
-                success: function(response) {
-                    alert('Cuenta creada con éxito');
-                    // Redirigir o limpiar formulario después de la creación exitosa
-                    $("#crear-plan-form")[0].reset();
-                    $("#cuenta-resumen").empty();
-                },
-                error: function(error) {
-                    console.error('Error:', error);
-                    alert('Hubo un error al crear la cuenta.');
-                }
-            });
+    function updateCuentasList() {
+        const cuentasList = $("#cuentas-list");
+        cuentasList.empty();
+        cuentas.forEach(cuenta => {
+            const cuentaItem = $(`<li>${cuenta.codigo_cuenta} - ${cuenta.nombre_cuenta} - ${cuenta.descripcion_cuenta}</li>`);
+            cuentasList.append(cuentaItem);
+        });
+    }
+
+    function clearForm() {
+        $("#codigo-cuenta").val('');
+        $("#descripcion-cuenta").val('');
+        $("#nombre-cuenta").val('');
+        $("#nivel-cuenta").val('');
+        $("#tipo-cuenta").val('');
+        $("#saldo-normal").val('');
+    }
+
+    $("#crear-plan-btn").click(function () {
+        if (cuentas.length === 0) {
+            alert("No hay cuentas agregadas.");
+            return;
+        }
+
+        $.ajax({
+            url: `http://localhost:9000/empresas/${empresaSeleccionada.id}/crear-plan`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(cuentas),
+            success: function (response) {
+                alert("Plan de cuentas creado con éxito.");
+                window.location.href = 'index.html';  // Cambia 'index.html' al archivo correcto
+            },
+            error: function (error) {
+                console.error('Error:', error);
+            }
         });
     });
 });

@@ -22,7 +22,7 @@ $(function () {
             const empresaDiv = $(`
                 <div>
                     <span>${empresa.nombre}</span>
-                    <button class="select-btn" data-id="${empresa.id_empresas}">Seleccionar</button>
+                    <button class="select-btn" data-id="${empresa.id_empresas}" data-nombre="${empresa.nombre}">Seleccionar</button>
                 </div>
             `);
             resultsDiv.append(empresaDiv);
@@ -30,6 +30,9 @@ $(function () {
 
         $(".select-btn").click(function () {
             const empresaId = $(this).data('id');
+            const empresaNombre = $(this).data('nombre');
+            localStorage.setItem('empresaSeleccionada', JSON.stringify({ id: empresaId, nombre: empresaNombre }));
+
             $.ajax({
                 url: `http://localhost:9000/empresas/${empresaId}/planes`,
                 method: 'POST',
@@ -66,7 +69,7 @@ $(function () {
     function showCreatePlanButton() {
         const createButton = $("<button>Crear nuevo plan de cuentas</button>");
         createButton.click(function () {
-            window.location.href = 'crear_plan.html';  // Cambia 'crear_plan.html' al archivo correcto
+            window.location.href = 'crear_plan.html';
         });
         $("#planes-de-cuentas").append(createButton);
     }

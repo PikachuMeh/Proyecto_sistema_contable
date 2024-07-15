@@ -66,16 +66,14 @@ class PlanCuentasSchema(BaseModel):
 
 class ErrorMessage(BaseModel):
     message: str
-
-class PlanCuentaCreate(BaseModel):
+    
+class PlanCuentasSchema(BaseModel):
     codigo_cuenta: str
     descripcion_cuenta: str
     nombre_cuenta: str
-    nivel_cuenta: int
+    nivel_cuenta: str
     tipo_cuenta: str
     saldo_normal: str
-    estado: str
-
 @app.get("/")
 async def index():
     
@@ -96,22 +94,28 @@ def get_planes_de_cuentas(empresa_id: int):
         return {"message": "No se encontró plan"}
     return planes
 
-@app.post("/crear-plan-cuenta")
-def crear_plan_cuenta(plan_cuenta: PlanCuentaCreate):
-    # Aquí se puede agregar la lógica para validar y guardar la nueva cuenta en la base de datos
-    # Ejemplo básico:
-    nueva_cuenta = PlanCuentas(
-        codigo_cuenta=plan_cuenta.codigo_cuenta,
-        descripcion_cuenta=plan_cuenta.descripcion_cuenta,
-        nombre_cuenta=plan_cuenta.nombre_cuenta,
-        nivel_cuenta=plan_cuenta.nivel_cuenta,
-        tipo_cuenta=plan_cuenta.tipo_cuenta,
-        saldo_normal=plan_cuenta.saldo_normal,
-        estado=plan_cuenta.estado
-    )
-    session.add(nueva_cuenta)
+from fastapi import HTTPException
+
+@app.post("/empresas/{empresa_id}/crear-plan")
+def crear_plan(empresa_id: int, cuentas: list[PlanCuentasSchema]):
+    for cuenta in cuentas:
+        nueva_cuenta = PlanCuentas(
+            codigo_cuenta=cuenta.codigo_cuenta,
+            descripcion_cuenta=cuenta.descripcion_cuenta,
+            nombre_cuenta=cuenta.nombre_cuenta,
+            nivel_cuenta=cuenta.nivel_cuenta,
+            tipo_cuenta=cuenta.tipo_cuenta,
+            saldo_normal=cuenta.saldo_normal,
+            estado="abierto",
+            registro_empresas=empresa_id
+        )
+        session.add(nueva_cuenta)
     session.commit()
-    return {"message": "Cuenta creada con éxito"}
+    return {"message": "Plan de cuentas creado con éxito."}
+
+    
+    session.commit()
+    return {"message": "Cuentas creadas con éxito"}
 
 """@app.post("/login/")
 async def otro(objeto: Item):
