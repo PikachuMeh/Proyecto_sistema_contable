@@ -15,39 +15,32 @@ $(function () {
         });
     });
 
-    function displaySearchResults(empresas) {
-        const resultsDiv = $("#search-results");
-        resultsDiv.empty();
-        empresas.forEach(empresa => {
-            const empresaDiv = $(`
-                <div>
-                    <span>${empresa.nombre}</span>
-                    <button class="select-btn" data-id="${empresa.id_empresas}" data-nombre="${empresa.nombre}">Seleccionar</button>
-                </div>
-            `);
-            resultsDiv.append(empresaDiv);
-        });
+    // Delegación de eventos para manejar clic en botones .select-btn
+    $("#search-results").on('click', '.select-btn', function () {
+        const empresaId = $(this).data('id');
+        const empresaNombre = $(this).data('nombre');
+        console.log("ID de la empresa seleccionada:", empresaId); // Verifica que capture el ID correctamente
+        localStorage.setItem('empresaSeleccionada', JSON.stringify({ id: empresaId, nombre: empresaNombre }));
+        // Resto del código AJAX para obtener o crear planes de cuentas
+    
+        obtenerPlanesCuentas(empresaId);
+    });
 
-        $(".select-btn").click(function () {
-            const empresaId = $(this).data('id');
-            const empresaNombre = $(this).data('nombre');
-            localStorage.setItem('empresaSeleccionada', JSON.stringify({ id: empresaId, nombre: empresaNombre }));
-
-            $.ajax({
-                url: `http://localhost:9000/empresas/${empresaId}/planes`,
-                method: 'POST',
-                contentType: 'application/json',
-                success: function (response) {
-                    if (response.length > 0) {
-                        displayPlanesDeCuentas(response); // Mostrar los planes de cuentas existentes
-                    } else {
-                        showCreatePlanButton(); // Mostrar el botón para crear un nuevo plan
-                    }
-                },
-                error: function (error) {
-                    console.error('Error:', error);
+    function obtenerPlanesCuentas(empresaId) {
+        $.ajax({
+            url: `http://localhost:9000/empresas/${empresaId}/planes`,
+            method: 'GET',
+            contentType: 'application/json',
+            success: function (response) {
+                if (response.length > 0) {
+                    displayPlanesDeCuentas(response); // Mostrar los planes de cuentas existentes
+                } else {
+                    showCreatePlanButton(); // Mostrar el botón para crear un nuevo plan
                 }
-            });
+            },
+            error: function (error) {
+                console.error('Error:', error);
+            }
         });
     }
 
@@ -73,5 +66,21 @@ $(function () {
             window.location.href = 'crear_plan.html';
         });
         $("#planes-de-cuentas").empty().append(createButton);
+    }
+
+    // Función para mostrar resultados de búsqueda de empresas
+    function displaySearchResults(empresas) {
+        const resultsDiv = $("#search-results");
+        resultsDiv.empty();
+        empresas.forEach(empresa => {
+            console.log("Datos de la empresa:", empresa); // Verifica todos los datos de la empresa recibidos
+            const empresaDiv = $(`
+                <div>
+                    <span>${empresa.nombre}</span>
+                    <button class="select-btn" data-id="${empresa.id_empresas}" data-nombre="${empresa.nombre}">Seleccionar</button>
+                </div>
+            `);
+            resultsDiv.append(empresaDiv);
+        });
     }
 });
