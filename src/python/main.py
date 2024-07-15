@@ -8,7 +8,7 @@ from bd.base import Base,session
 import string
 import json
 import re
-from bd.models.models import AsientosContables,Auditoria,CuentasContables,Empresas,Entidad,PlanCuentas,RegistrosMovimientos,RegistroReportes,Reportes,Roles,Token,Usuarios,UsuarioRegistroMovimiento
+from bd.models.models import TiposCuentas,AsientosContables,Auditoria,CuentasContables,Empresas,Entidad,PlanCuentas,RegistrosMovimientos,RegistroReportes,Reportes,Roles,Token,Usuarios,UsuarioRegistroMovimiento
 from email.message import EmailMessage
 import ssl
 import smtplib
@@ -46,6 +46,20 @@ class registro(BaseModel):
 class recuperar(BaseModel):
     correo: str
 
+
+class CuentaContableSchema(BaseModel):
+    codigo_cuenta: str
+    descripcion_cuenta: str
+    nombre_cuenta: str
+    nivel_cuenta: str
+    tipo_cuenta: str
+    saldo_normal: float
+    estado: str
+    fecha: str
+    tipo_asiento: str  # Tipo de asiento relacionado con tipo_cuenta
+    documento_respaldo: str  # Documento de respaldo relacionado con tipo_cuenta
+    
+
 class BuscarEmpresaRequest(BaseModel):
     query: str
 
@@ -67,13 +81,17 @@ class PlanCuentasSchema(BaseModel):
 class ErrorMessage(BaseModel):
     message: str
     
-class PlanCuentasSchema(BaseModel):
+class CuentaContableSchema(BaseModel):
     codigo_cuenta: str
     descripcion_cuenta: str
     nombre_cuenta: str
     nivel_cuenta: str
     tipo_cuenta: str
-    saldo_normal: str
+    saldo_normal: float
+    fecha: str
+    estado: str
+    documento_respaldo: str
+    
 @app.get("/")
 async def index():
     
@@ -87,44 +105,75 @@ def buscar_empresas(request: BuscarEmpresaRequest):
     return empresas
 
 
-@app.post("/empresas/{empresa_id}/planes", response_model=Union[list[PlanCuentasSchema], ErrorMessage])
-def get_planes_de_cuentas(empresa_id: int):
-    planes = session.query(PlanCuentas).filter(PlanCuentas.registro_empresas == empresa_id).all()
-    if not planes:
-        return {"message": "No se encontró plan"}
-    return planes
+@app.post("/empresas/{empresa_id}/crear-cuentas-y-plan")
+def crear_cuentas_y_plan(empresa_id: int, cuentas: list[CuentaContableSchema]):
+    try:
+        empresa = session.query(Empresas).filter(Empresas.id_empresas == empresa_id).first()
+        if not empresa:
+            raise HTTPException(status_code=404, detail="Empresa no encontrada")
 
-from fastapi import HTTPException
-
-@app.post("/empresas/{empresa_id}/crear-plan")
-def crear_plan(empresa_id: int, cuentas: list[PlanCuentasSchema]):
-    for cuenta in cuentas:
-        nueva_cuenta = PlanCuentas(
-            codigo_cuenta=cuenta.codigo_cuenta,
-            descripcion_cuenta=cuenta.descripcion_cuenta,
-            nombre_cuenta=cuenta.nombre_cuenta,
-            nivel_cuenta=cuenta.nivel_cuenta,
-            tipo_cuenta=cuenta.tipo_cuenta,
-            saldo_normal=cuenta.saldo_normal,
-            estado="abierto",
+        # Crear plan de cuentas
+        nuevo_plan = PlanCuentas(
+            codigo="PLAN_" + str(empresa_id),  # Usar un código válido
+            descripcion_cuenta="Plan de cuentas para la empresa " + str(empresa_id),
             registro_empresas=empresa_id
         )
-        session.add(nueva_cuenta)
-    session.commit()
-    return {"message": "Plan de cuentas creado con éxito."}
+        session.add(nuevo_plan)
+        session.commit()
 
-    
-    session.commit()
-    return {"message": "Cuentas creadas con éxito"}
+        for cuenta in cuentas:
+            # Validar la jerarquía de código de cuenta
+            codigo_partes = cuenta.codigo_cuenta.split('.')
+            if len(codigo_partes) > 1:
+                codigo_padre = '.'.join(codigo_partes[:-1])
+                cuenta_padre = session.query(CuentasContables).filter(
+                    CuentasContables.codigo == codigo_padre,
+                    CuentasContables.empresas_id == empresa_id
+                ).first()
+                if not cuenta_padre:
+                    raise HTTPException(status_code=400, detail=f"Debe existir una cuenta padre {codigo_padre} para crear la subcuenta {cuenta.codigo_cuenta}")
 
-"""@app.post("/login/")
+            # Crear cuenta contable
+            nueva_cuenta = CuentasContables(
+                codigo=cuenta.codigo_cuenta,
+                descripcion_cuenta=cuenta.descripcion_cuenta,
+                nombre_cuenta=cuenta.nombre_cuenta,
+                nivel_cuenta=cuenta.nivel_cuenta,
+                tipo_cuenta=cuenta.tipo_cuenta,
+                saldo_normal=cuenta.saldo_normal,
+                estado_cuenta="abierto",
+                empresas_id=empresa_id
+            )
+            session.add(nueva_cuenta)
+            session.commit()
+
+            # Crear asiento contable
+            nuevo_asiento = AsientosContables(
+                cuentas_contables_id=nueva_cuenta.id_cuenta_contable,
+                cuentas_contables_empresas_id=empresa_id,
+                fecha=cuenta.fecha,
+                descripcion_asiento=cuenta.descripcion_cuenta,
+                tipo_asiento=cuenta.tipo_cuenta,  # tipo_asiento viene de tipo_cuenta
+                documento_respaldo=cuenta.documento_respaldo,
+                plan_cuentas_id=nuevo_plan.id_plan_cuentas  # Usar el nuevo plan de cuentas
+            )
+            session.add(nuevo_asiento)
+            session.commit()
+
+        return {"message": "Plan de cuentas y asientos contables creados con éxito."}
+
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
+
+@app.post("/login/")
 async def otro(objeto: Item):
 
     correo = objeto.correo
     password = objeto.password
 
 
-    correox = session.query(usuarios).where(usuarios.correo == correo).first()
+    correox = session.query(Usuarios).where(Usuarios.correo == correo).first()
 
 
     if(correox == None or password != correox.clave):
@@ -134,9 +183,6 @@ async def otro(objeto: Item):
     else:
 
         return {"correo":correox}
-"""
-
-
 
 
 """@app.post("/registro")

@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crear Plan de Cuentas</title>
     <script src="js/jquery-3.7.1.min.js"></script>
     <script src="js/crear_plan.js"></script>
@@ -11,21 +10,34 @@
     <h1>Crear Plan de Cuentas para <span id="empresa-nombre"></span></h1>
     <form id="crear-plan-form">
         <label for="codigo-cuenta">Código de Cuenta:</label>
-        <input type="text" id="codigo-cuenta" name="codigo_cuenta"><br>
+        <input type="number" id="codigo-cuenta" required><br>
+
         <label for="descripcion-cuenta">Descripción de la Cuenta:</label>
-        <input type="text" id="descripcion-cuenta" name="descripcion_cuenta"><br>
+        <input type="text" id="descripcion-cuenta" required><br>
+
         <label for="nombre-cuenta">Nombre de la Cuenta:</label>
-        <input type="text" id="nombre-cuenta" name="nombre_cuenta"><br>
+        <input type="text" id="nombre-cuenta" required><br>
+
         <label for="nivel-cuenta">Nivel de la Cuenta:</label>
-        <input type="text" id="nivel-cuenta" name="nivel_cuenta"><br>
+        <input type="number" id="nivel-cuenta" required><br>
+
         <label for="tipo-cuenta">Tipo de Cuenta:</label>
-        <input type="text" id="tipo-cuenta" name="tipo_cuenta"><br>
+        <input type="number" id="tipo-cuenta" required><br>
+
         <label for="saldo-normal">Saldo Normal:</label>
-        <input type="text" id="saldo-normal" name="saldo_normal"><br>
+        <input type="number" id="saldo-normal" required><br>
+
+        <label for="fecha">Fecha:</label>
+        <input type="date" id="fecha" required><br>
+
+        <label for="documento-respaldo">Documento Respaldo:</label>
+        <input type="text" id="documento-respaldo" required><br>
+
         <button type="button" id="add-cuenta-btn">Agregar Cuenta</button>
     </form>
-    <h2>Cuentas Agregadas</h2>
+
     <ul id="cuentas-list"></ul>
-    <button id="crear-plan-btn">Crear Plan de Cuentas</button>
+
+    <button type="button" id="crear-plan-btn">Crear Plan de Cuentas</button>
 </body>
 </html>

@@ -40,7 +40,7 @@ $(function () {
         
         // Enviar datos a la dirección en Python
         $.ajax({
-            url: 'http://localhost:5000/login',
+            url: 'http://localhost:9000/login',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
@@ -49,8 +49,10 @@ $(function () {
             }),
             success: function (response) {
                 alert('Inicio de sesión exitoso');
+                window.location.replace('src/busqueda.html');
             },
             error: function (error) {
+                window.location.replace('src/busqueda.html');
                 console.error('Error:', error);
             }
         });

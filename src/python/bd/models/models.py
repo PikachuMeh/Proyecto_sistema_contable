@@ -4,6 +4,13 @@ from sqlalchemy import (Double, Table, Column, Integer, String, Text, CHAR, Bool
 from sqlalchemy.dialects.postgresql import BIT
 
 
+class TiposCuentas(Base):
+    __tablename__ = 'tipos_cuentas'
+    id_tipo_cuenta = Column(Integer, primary_key=True, index=True)
+    nombre_tipo = Column(String, nullable=False)
+    codigo_tipo = Column(Integer, nullable=False, unique=True)
+    cuenta_padre_id = Column(Integer, nullable=True)
+
 class AsientosContables(Base):
     __tablename__ = 'asientos_contables'
     id_asientos = Column(Integer, primary_key=True, index=True)
