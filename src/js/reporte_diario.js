@@ -36,10 +36,27 @@ $(function () {
         const empresaNombre = $(this).data('nombre');
         console.log("ID de la empresa seleccionada:", empresaId); // Verifica que capture el ID correctamente
         localStorage.setItem('empresaSeleccionada', JSON.stringify({ id: empresaId, nombre: empresaNombre }));
-        // Resto del código AJAX para obtener o crear planes de cuentas
-    
-        mostrarFormularioReporte(empresaId, empresaNombre);
+        // Verifica si la empresa tiene un plan de cuentas antes de mostrar el formulario de reporte
+        verificarPlanCuentas(empresaId, empresaNombre);
     });
+
+    function verificarPlanCuentas(empresaId, empresaNombre) {
+        $.ajax({
+            url: `http://localhost:9000/empresas/${empresaId}/planes`,
+            method: 'GET',
+            contentType: 'application/json',
+            success: function (response) {
+                if (response.length > 0) {
+                    mostrarFormularioReporte(empresaId, empresaNombre);
+                } else {
+                    alert("La empresa seleccionada no tiene un plan de cuentas. No se puede crear un reporte.");
+                }
+            },
+            error: function (error) {
+                console.error('Error:', error);
+            }
+        });
+    }
 
     function mostrarFormularioReporte(empresaId, empresaNombre) {
         const formDiv = $("#report-form");
