@@ -1,9 +1,10 @@
 $(function () {
-    //Registro
+    //Registro, aunque por ahora no se va a utilizar.
     $("#registro").click(function (e) {
         e.preventDefault(); // Evitar que el formulario se envíe de forma tradicional
-        window.location.replace('src/plan_cuentas.html');
-        /*const nombre = $("input[name='txt']").val();
+        alert("Por ahora el registro no esta habilitado")
+        /*window.location.replace('src/plan_cuentas.html');
+        const nombre = $("input[name='txt']").val();
         const correo = $("input[name='email']").val();
         const telefono = $("input[name='broj']").val();
         const contrasena = $("input[name='pswd']").val();
