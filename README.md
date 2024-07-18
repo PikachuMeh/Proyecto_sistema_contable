@@ -7,3 +7,6 @@ Para que funcione el sistema hay que tener python instalado, los scripts habilit
 xampp y mas nada
 
 junto a este sql
+
+
+como dato adicional, esta hecho para que funcione en la carpeta xampp directamente (htdocs)
