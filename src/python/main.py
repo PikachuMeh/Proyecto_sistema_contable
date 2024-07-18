@@ -32,7 +32,7 @@ app.add_middleware(
 
 class Item(BaseModel):
     correo: str
-    password: str
+    contrasena: str
 
 class registro(BaseModel):
     nombre: str
@@ -77,6 +77,11 @@ class EmpresaSchema(BaseModel):
 class ErrorMessage(BaseModel):
     message: str
     
+class ReporteCreate(BaseModel):
+    fecha_inicio: str
+    fecha_fin: str
+    nivel_detalle: str
+    formato: str    
     
 class CuentaContableSchema(BaseModel):
     codigo_cuenta: str
@@ -167,28 +172,49 @@ def crear_cuentas_y_plan(empresa_id: int, cuentas: list[CuentaContableSchema]):
 @app.get("/empresas/{empresa_id}/planes")
 def obtener_planes(empresa_id: int):
     planes = session.query(PlanCuentas).filter(PlanCuentas.registro_empresas == empresa_id).all()
-    if not planes:
-        raise HTTPException(status_code=404, detail="No se encontraron planes de cuentas para la empresa especificada")
     return planes
+
+@app.post("/empresas/{empresa_id}/crear-reporte")
+def crear_reporte(empresa_id: int, reporte_data: ReporteCreate):
+    # Verificar que la empresa existe
+    empresa = session.query(Empresas).filter(Empresas.id_empresas == empresa_id).first()
+    if not empresa:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+
+    # Crear el reporte
+    nuevo_reporte = Reportes(
+        tipo_reporte="Libro Diario",
+        fecha_inicio=reporte_data.fecha_inicio,
+        fecha_fin=reporte_data.fecha_fin,
+        nivel_detalle=reporte_data.nivel_detalle,
+        formato=reporte_data.formato,
+        archivo=""  # Aquí se generaría y guardaría el archivo del reporte
+    )
+    session.add(nuevo_reporte)
+    session.commit()
+
+    # Obtener los registros de movimientos para el reporte
+    movimientos = session.query(RegistrosMovimientos).filter(
+        RegistrosMovimientos.Empresas_id == empresa_id,
+        RegistrosMovimientos.Fecha_movimiento >= reporte_data.fecha_inicio,
+        RegistrosMovimientos.Fecha_movimiento <= reporte_data.fecha_fin
+    ).all()
+
+    # Aquí iría la lógica para generar el archivo del reporte basado en los movimientos obtenidos
+
+    return {"message": "Reporte creado con éxito", "reporte_id": nuevo_reporte.id_reporte}
 
 @app.post("/login/")
 async def otro(objeto: Item):
-
     correo = objeto.correo
-    password = objeto.password
-
+    password = objeto.contrasena
 
     correox = session.query(Usuarios).where(Usuarios.correo == correo).first()
 
-
-    if(correox == None or password != correox.clave):
-
-        return {"Falso":False}
-
+    if correox is None or password != correox.clave:
+        return {"Falso": False}
     else:
-
-        return {"correo":correox}
-
+        return {"correo": correox}
 
 """@app.post("/registro")
 async def registro(archivo : registro):

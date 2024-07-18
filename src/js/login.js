@@ -35,12 +35,17 @@ $(function () {
     //Inicio de Sesion
     $("#login").click(function (e) { 
         e.preventDefault(); // Evitar que el formulario se envíe de forma tradicional
-        const correo = $("input[name='email']").val();
-        const contrasena = $("input[name='pswd']").val();
-        
+        const correo = $("#email").val();
+        const contrasena = $("#password").val();
+        if (correo === "" || contrasena === "") {
+            alert("Por favor complete ambos campos.");
+            return;
+        }
+    
+    
         // Enviar datos a la dirección en Python
         $.ajax({
-            url: 'http://localhost:9000/login',
+            url: 'http://localhost:9000/login/', // Asegúrate de que la URL es correcta
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
@@ -48,12 +53,16 @@ $(function () {
                 contrasena: contrasena
             }),
             success: function (response) {
-                alert('Inicio de sesión exitoso');
-                window.location.replace('src/busqueda.html');
+                if (response.Falso === false) {
+                    alert('Correo o clave incorrectos');
+                } else {
+                    alert('Inicio de sesión exitoso');
+                    window.location.replace('src/menu.html');
+                }
             },
             error: function (error) {
-                window.location.replace('src/busqueda.html');
                 console.error('Error:', error);
+                alert('Error en el inicio de sesión');
             }
         });
     });
