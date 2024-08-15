@@ -7,8 +7,20 @@
     <script src="js/crear_plan.js"></script>
 </head>
 <body>
+
     <h1>Crear Plan de Cuentas para <span id="empresa-nombre"></span></h1>
+
+    <!-- Selección de la opción -->
+    <label>
+        <input type="radio" name="plan-option" value="nuevo" checked> Crear Plan de Cuentas desde cero
+    </label>
+    <label>
+        <input type="radio" name="plan-option" value="archivo"> Agregar Plan de Cuentas mediante archivo Excel
+    </label>
+
+    <!-- Formulario para crear un plan de cuentas desde cero -->
     <form id="crear-plan-form">
+        <h2>Crear Plan de Cuentas</h2>
         <label for="codigo-cuenta">Código de Cuenta:</label>
         <input type="number" id="codigo-cuenta" required><br>
 
@@ -34,6 +46,15 @@
         <input type="text" id="documento-respaldo" required><br>
 
         <button type="button" id="add-cuenta-btn">Agregar Cuenta</button>
+    </form>
+
+    <!-- Formulario para agregar un plan de cuentas mediante archivo Excel -->
+    <form id="agregar-plan-form" style="display:none;">
+        <h2>Agregar Plan de Cuentas mediante archivo Excel</h2>
+        <label for="archivo-excel">Subir archivo Excel:</label>
+        <input type="file" id="archivo-excel" accept=".xlsx" required><br>
+
+        <button type="button" id="upload-plan-btn">Subir Plan de Cuentas</button>
     </form>
 
     <ul id="cuentas-list"></ul>

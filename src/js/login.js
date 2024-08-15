@@ -58,6 +58,7 @@ $(function () {
                     alert('Correo o clave incorrectos');
                 } else {
                     alert('Inicio de sesión exitoso');
+                    localStorage.setItem('correo',correo);
                     window.location.replace('src/menu.html');
                 }
             },

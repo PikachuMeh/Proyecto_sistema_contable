@@ -112,3 +112,45 @@ $(function () {
         });
     });
 });
+$(document).ready(function() {
+    // Manejar el cambio de opción
+    $('input[name="plan-option"]').change(function() {
+        if ($(this).val() === 'nuevo') {
+            $('#crear-plan-form').show();
+            $('#agregar-plan-form').hide();
+        } else if ($(this).val() === 'archivo') {
+            $('#crear-plan-form').hide();
+            $('#agregar-plan-form').show();
+        }
+    });
+
+    // Aquí puedes manejar el evento de agregar cuenta al plan (si se crea desde cero)
+    $('#add-cuenta-btn').click(function() {
+        // Código para agregar cuenta
+    });
+
+    // Aquí puedes manejar la subida del archivo Excel
+    $('#upload-plan-btn').click(function() {
+        const archivo = $('#archivo-excel')[0].files[0];
+        if (archivo) {
+            const formData = new FormData();
+            formData.append('archivo', archivo);
+
+            $.ajax({
+                url: 'ruta_a_tu_api_para_subir_el_excel', // Cambia a la ruta de tu API
+                method: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    alert('Plan de cuentas subido con éxito');
+                },
+                error: function(error) {
+                    console.error('Error al subir el archivo:', error);
+                }
+            });
+        } else {
+            alert('Por favor, selecciona un archivo');
+        }
+    });
+});

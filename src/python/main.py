@@ -13,6 +13,7 @@ from email.message import EmailMessage
 import ssl
 import smtplib
 import pyautogui
+import openpyxl
 
 
 app = FastAPI()
@@ -101,7 +102,7 @@ async def index():
 
 @app.post("/buscar-empresas", response_model=list[EmpresaSchema])
 def buscar_empresas(request: BuscarEmpresaRequest):
-    empresas = session.query(Empresas).filter(Empresas.nombre.ilike(f"%{request.query}%")).all()
+    empresas = session.query(Empresas).filter(Empresas.rif.ilike(f"%{request.query}%")).all()
     if not empresas:
         raise HTTPException(status_code=404, detail="No companies found")
     return empresas
@@ -216,6 +217,27 @@ async def otro(objeto: Item):
     else:
         return {"correo": correox}
 
+@app.post("/crear-plan/")
+async def crear_plan():
+    book = openpyxl.load_workbook('../plantillas/modelo_cuentas.xlsx')
+    hoja = book.active
+    
+    celdas = hoja['A1':'B325']
+    resultados = []
+
+    for fila in celdas:
+        # Accede a los valores de las celdas
+        valor_celda_1 = fila[0].value
+        valor_celda_2 = fila[1].value
+        
+        dato = {
+            'codigo': valor_celda_1,
+            'descripcion': valor_celda_2
+        }
+        
+        resultados.append(dato)
+    
+    return {"resultados": resultados}
 """@app.post("/registro")
 async def registro(archivo : registro):
 
