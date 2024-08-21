@@ -2,9 +2,10 @@ import os
 from dotenv import load_dotenv
 from typing import Union
 from pydantic import BaseModel,Field
-from fastapi import FastAPI,HTTPException,Depends
+from fastapi import FastAPI,HTTPException,Depends,File,UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from bd.base import Base,session
+import tempfile
 import string
 import json
 import re
@@ -217,27 +218,75 @@ async def otro(objeto: Item):
     else:
         return {"correo": correox}
 
-@app.post("/crear-plan/")
-async def crear_plan():
-    book = openpyxl.load_workbook('../plantillas/modelo_cuentas.xlsx')
-    hoja = book.active
-    
-    celdas = hoja['A1':'B325']
-    resultados = []
+@app.post("/empresas/crear-plan/")
+async def crear_plan(archivo: UploadFile = File(...)):
+    if not archivo.filename.endswith('.xlsx'):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un archivo Excel con extensión .xlsx")
 
-    for fila in celdas:
-        # Accede a los valores de las celdas
-        valor_celda_1 = fila[0].value
-        valor_celda_2 = fila[1].value
+    try:
+        # Crear un archivo temporal para guardar el contenido
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as temp_file:
+            temp_file.write(await archivo.read())
+            temp_file.flush()
+
+            # Cargar el archivo Excel con openpyxl
+            workbook = openpyxl.load_workbook(temp_file.name)
+            hoja = workbook.active
+
+            # Leer las celdas (ajusta el rango según tus datos)
+            celdas = hoja['A1':'C325']
+            resultados = []
+            arreglo = []
+            contador = 0
+
+            for fila in celdas:
+                valor_celda_1 = str(fila[0].value)  # Convertir a cadena
+                valor_celda_2 = str(fila[1].value)
+                valor_celda_3 = str(fila[2].value)
+
+                if contador == 0:
+                    arreglo.append(valor_celda_1)  # Agregar valor al arreglo
+                
+                elif contador == 1:
+                    arreglo.append(valor_celda_1)  # Agregar el segundo valor al arreglo
+                    bandera = arreglo[1]
+                    ultimo_numero = arreglo[1].split(".")[-1]
+                        
+                    bandera_puntos = re.sub(r'[^.]', '', arreglo[0])
+                    bandera_puntos2 = re.sub(r'[^.]', '', arreglo[1])
+                        
+                    if bandera_puntos < bandera_puntos2 and (int(ultimo_numero) > 1 or int(ultimo_numero) < 0):
+                        return {"error": f"Esta mal colocado la cuenta en {arreglo[1]}"}
+                        
+                elif contador > 2:
+                    arreglo[0] = bandera
+                    arreglo[1] = valor_celda_1
+                    bandera = arreglo[1]
+                    ultimo_numero = arreglo[1].split(".")[-1]
+                        
+                    bandera_puntos = re.sub(r'[^.]', '', arreglo[0])
+                    bandera_puntos2 = re.sub(r'[^.]', '', arreglo[1])
+                        
+                    if bandera_puntos < bandera_puntos2 and int(ultimo_numero) > 1:
+                        return {"error": f"El codigo no puede tener un salto en el nivel de detalle, en este caso el codigo: {arreglo[1]}"}
+                        
+                dato = {
+                    'codigo': valor_celda_1,
+                    'descripcion': valor_celda_2,
+                    'saldo_actual': valor_celda_3
+                }
+                contador += 1
+                resultados.append(dato)
         
-        dato = {
-            'codigo': valor_celda_1,
-            'descripcion': valor_celda_2
-        }
-        
-        resultados.append(dato)
-    
-    return {"resultados": resultados}
+        return {"resultados": resultados,"ola":arreglo}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar el archivo: {str(e)}")
+
+    finally:
+        # Eliminar el archivo temporal
+        if os.path.exists(temp_file.name):
+            os.remove(temp_file.name)
 """@app.post("/registro")
 async def registro(archivo : registro):
 
