@@ -10,3 +10,6 @@ junto a este sql
 
 
 como dato adicional, esta hecho para que funcione en la carpeta xampp directamente (htdocs)
+
+
+en conjunto tienes que tener habilitado el .venv
