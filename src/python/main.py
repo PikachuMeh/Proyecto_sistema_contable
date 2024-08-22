@@ -236,49 +236,36 @@ async def crear_plan(archivo: UploadFile = File(...)):
             # Leer las celdas (ajusta el rango según tus datos)
             celdas = hoja['A1':'C325']
             resultados = []
-            arreglo = []
-            contador = 0
+            ultimo_nivel = 0
 
             for fila in celdas:
-                valor_celda_1 = str(fila[0].value)  # Convertir a cadena
-                valor_celda_2 = str(fila[1].value)
-                valor_celda_3 = str(fila[2].value)
+                valor_celda_1 = str(fila[0].value) if fila[0].value is not None else ""
+                valor_celda_2 = str(fila[1].value) if fila[1].value is not None else ""
+                valor_celda_3 = str(fila[2].value) if fila[2].value is not None else ""
 
-                if contador == 0:
-                    arreglo.append(valor_celda_1)  # Agregar valor al arreglo
-                
-                elif contador == 1:
-                    arreglo.append(valor_celda_1)  # Agregar el segundo valor al arreglo
-                    bandera = arreglo[1]
-                    ultimo_numero = arreglo[1].split(".")[-1]
-                        
-                    bandera_puntos = re.sub(r'[^.]', '', arreglo[0])
-                    bandera_puntos2 = re.sub(r'[^.]', '', arreglo[1])
-                        
-                    if bandera_puntos < bandera_puntos2 and (int(ultimo_numero) > 1 or int(ultimo_numero) < 0):
-                        return {"error": f"Esta mal colocado la cuenta en {arreglo[1]}"}
-                        
-                elif contador > 2:
-                    arreglo[0] = bandera
-                    arreglo[1] = valor_celda_1
-                    bandera = arreglo[1]
-                    ultimo_numero = arreglo[1].split(".")[-1]
-                        
-                    bandera_puntos = re.sub(r'[^.]', '', arreglo[0])
-                    bandera_puntos2 = re.sub(r'[^.]', '', arreglo[1])
-                        
-                    if bandera_puntos < bandera_puntos2 and int(ultimo_numero) > 1:
-                        return {"error": f"El codigo no puede tener un salto en el nivel de detalle, en este caso el codigo: {arreglo[1]}"}
-                        
+                # Si el código de cuenta está vacío, lo ignoramos
+                if not valor_celda_1:
+                    continue
+
+                # Contar la cantidad de puntos en el código para determinar el nivel
+                nivel_actual = valor_celda_1.count('.')
+
+                # Validación: el nivel actual no puede saltar más de un nivel de detalle
+                if nivel_actual > ultimo_nivel + 1:
+                    return {"error": f"Error en el código {valor_celda_1}: el código no sigue la jerarquía adecuada."}
+
+                # Actualizar el último nivel procesado
+                ultimo_nivel = nivel_actual
+
+                # Agregar el dato al resultado final
                 dato = {
                     'codigo': valor_celda_1,
                     'descripcion': valor_celda_2,
                     'saldo_actual': valor_celda_3
                 }
-                contador += 1
                 resultados.append(dato)
         
-        return {"resultados": resultados,"ola":arreglo}
+        return {"resultados": resultados}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al procesar el archivo: {str(e)}")

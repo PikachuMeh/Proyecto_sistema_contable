@@ -19,36 +19,38 @@
     </label>
 
     <!-- Formulario para crear un plan de cuentas desde cero -->
-    <form id="crear-plan-form">
+    
+    <form id="crear-plan-form" >
+        <p>Desabilitado por ahora</p>
         <h2>Crear Plan de Cuentas</h2>
         <label for="codigo-cuenta">Código de Cuenta:</label>
-        <input type="number" id="codigo-cuenta" required><br>
+        <input type="number" id="codigo-cuenta" required disabled><br>
 
         <label for="descripcion-cuenta">Descripción de la Cuenta:</label>
-        <input type="text" id="descripcion-cuenta" required><br>
+        <input type="text" id="descripcion-cuenta" required disabled><br>
 
         <label for="nombre-cuenta">Nombre de la Cuenta:</label>
-        <input type="text" id="nombre-cuenta" required><br>
+        <input type="text" id="nombre-cuenta" required disabled><br>
 
         <label for="nivel-cuenta">Nivel de la Cuenta:</label>
-        <input type="number" id="nivel-cuenta" required><br>
+        <input type="number" id="nivel-cuenta" required disabled><br>
 
         <label for="tipo-cuenta">Tipo de Cuenta:</label>
-        <input type="number" id="tipo-cuenta" required><br>
+        <input type="number" id="tipo-cuenta" required disabled><br>
 
         <label for="saldo-normal">Saldo Normal:</label>
-        <input type="number" id="saldo-normal" required><br>
+        <input type="number" id="saldo-normal" required disabled><br>
 
         <label for="fecha">Fecha:</label>
-        <input type="date" id="fecha" required><br>
+        <input type="date" id="fecha" required disabled><br>
 
         <label for="documento-respaldo">Documento Respaldo:</label>
-        <input type="text" id="documento-respaldo" required><br>
+        <input type="text" id="documento-respaldo" required disabled><br>
 
-        <button type="button" id="add-cuenta-btn">Agregar Cuenta</button>
+        <button type="button" id="add-cuenta-btn" disabled>Agregar Cuenta</button>
         <ul id="cuentas-list"></ul>
 
-        <button type="button" id="crear-plan-btn">Crear Plan de Cuentas</button>
+        <button type="button" id="crear-plan-btn" disabled>Crear Plan de Cuentas</button>
     </form>
 
     <!-- Formulario para agregar un plan de cuentas mediante archivo Excel -->

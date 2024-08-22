@@ -21,10 +21,10 @@ $(document).ready(function() {
                 alert('Por favor, sube un archivo Excel con extensión .xlsx');
                 return;
             }
-
+    
             const formData = new FormData();
             formData.append('archivo', archivo);
-
+    
             $.ajax({
                 url: 'http://localhost:9000/empresas/crear-plan/', // Cambia a la ruta de tu API si es necesario
                 method: 'POST',
@@ -33,13 +33,18 @@ $(document).ready(function() {
                 processData: false,
                 success: function(response) {
                     // Manejar la respuesta exitosa
-                    console.log('Respuesta:', response);
-                    alert('Plan de cuentas subido con éxito');
+                    if (response.error) {
+                        alert('Error: ' + response.error); // Mostrar mensaje de error específico
+                    } else {
+                        alert('Plan de cuentas subido con éxito');
+                        console.log('Respuesta:', response);
+                    }
                 },
                 error: function(error) {
                     // Manejar errores
+                    const errorMessage = error.responseJSON?.detail || 'Hubo un error al subir el archivo. Intenta nuevamente.';
+                    alert(errorMessage);
                     console.error('Error al subir el archivo:', error);
-                    alert('Hubo un error al subir el archivo. Intenta nuevamente.');
                 }
             });
         } else {
