@@ -9,7 +9,7 @@ import tempfile
 import string
 import json
 import re
-from bd.models.models import TiposCuentas,AsientosContables,Auditoria,CuentasContables,Empresas,Entidad,PlanCuentas,RegistrosMovimientos,RegistroReportes,Reportes,Roles,Token,Usuarios,UsuarioRegistroMovimiento
+from bd.models.models import AsientosContables,Bitacora,CuentasContables,Empresas,Departamentos,PlanCuentas,RegistrosMovimientos,Reportes,Usuarios,CierreContable,CuentasPrincipales,MovimientosPlan,MovimientosUsuarios
 from email.message import EmailMessage
 import ssl
 import smtplib
@@ -31,6 +31,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def validar_secuencia(codigos):
+    nivel_anterior = []
+
+    for codigo in codigos:
+        niveles = [int(n) for n in codigo.split(".")]
+
+        if not nivel_anterior:
+            nivel_anterior = niveles
+            continue
+
+        for i in range(len(niveles)):
+            if i < len(nivel_anterior):
+                if niveles[i] < nivel_anterior[i]:
+                    raise HTTPException(status_code=400, detail=f"Secuencia inválida: {codigo} no puede seguir a {'.'.join(map(str, nivel_anterior))}")
+                elif niveles[i] > nivel_anterior[i]:
+                    break  # Avanzó a un nuevo nivel, no necesita más comprobaciones
+            else:
+                break
+
+        nivel_anterior = niveles
+
+    return True
+
 
 class Item(BaseModel):
     correo: str
@@ -234,14 +258,16 @@ async def crear_plan(archivo: UploadFile = File(...)):
             hoja = workbook.active
 
             # Leer las celdas (ajusta el rango según tus datos)
-            celdas = hoja['A1':'C325']
+            celdas = hoja['A1':'F325']
             resultados = []
+            codigos = []
             ultimo_nivel = 0
 
             for fila in celdas:
                 valor_celda_1 = str(fila[0].value) if fila[0].value is not None else ""
                 valor_celda_2 = str(fila[1].value) if fila[1].value is not None else ""
                 valor_celda_3 = str(fila[2].value) if fila[2].value is not None else ""
+
 
                 # Si el código de cuenta está vacío, lo ignoramos
                 if not valor_celda_1:
@@ -252,10 +278,13 @@ async def crear_plan(archivo: UploadFile = File(...)):
 
                 # Validación: el nivel actual no puede saltar más de un nivel de detalle
                 if nivel_actual > ultimo_nivel + 1:
-                    return {"error": f"Error en el código {valor_celda_1}: el código no sigue la jerarquía adecuada."}
+                    raise HTTPException(status_code=400, detail=f"Error en el código {valor_celda_1}: el código no sigue la jerarquía adecuada.")
 
                 # Actualizar el último nivel procesado
                 ultimo_nivel = nivel_actual
+
+                # Agregar el código a la lista para validaciones adicionales
+                codigos.append(valor_celda_1)
 
                 # Agregar el dato al resultado final
                 dato = {
@@ -264,9 +293,15 @@ async def crear_plan(archivo: UploadFile = File(...)):
                     'saldo_actual': valor_celda_3
                 }
                 resultados.append(dato)
-        
+
+            # Validar la secuencia de códigos para evitar retrocesos indebidos
+            validar_secuencia(codigos)
+
+
         return {"resultados": resultados}
 
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al procesar el archivo: {str(e)}")
 

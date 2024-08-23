@@ -38,6 +38,7 @@ $(document).ready(function() {
                     } else {
                         alert('Plan de cuentas subido con éxito');
                         console.log('Respuesta:', response);
+                        window.location.replace('asientos_contables.html');
                     }
                 },
                 error: function(error) {
