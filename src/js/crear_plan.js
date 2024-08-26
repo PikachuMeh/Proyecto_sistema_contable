@@ -14,6 +14,15 @@ $(document).ready(function() {
     $('#upload-plan-btn').click(function() {
         const archivo = $('#archivo-excel')[0].files[0];
         
+        // Obtener la información de la empresa seleccionada desde localStorage
+        const empresaSeleccionada = JSON.parse(localStorage.getItem('empresaSeleccionada'));
+        if (!empresaSeleccionada) {
+            alert('Por favor, selecciona una empresa primero.');
+            return;
+        }
+
+        const empresaId = empresaSeleccionada.id;
+
         if (archivo) {
             // Verificar que el archivo tenga la extensión correcta
             const extension = archivo.name.split('.').pop().toLowerCase();
@@ -26,19 +35,20 @@ $(document).ready(function() {
             formData.append('archivo', archivo);
     
             $.ajax({
-                url: 'http://localhost:9000/empresas/crear-plan/', // Cambia a la ruta de tu API si es necesario
+                url: `http://localhost:9000/empresas/${empresaId}/crear-plan/`, // Añadir el ID de la empresa a la URL
                 method: 'POST',
                 data: formData,
                 contentType: false,
                 processData: false,
                 success: function(response) {
                     // Manejar la respuesta exitosa
-                    if (response.error) {
-                        alert('Error: ' + response.error); // Mostrar mensaje de error específico
-                    } else {
+                    if (response.resultados) {
                         alert('Plan de cuentas subido con éxito');
-                        console.log('Respuesta:', response);
+                        console.table(response.resultados); // Mostrar los resultados en forma de tabla
                         window.location.replace('asientos_contables.html');
+                    } else {
+                        alert('Error: no se recibieron resultados válidos.');
+                        console.log('Respuesta incompleta o inesperada:', response);
                     }
                 },
                 error: function(error) {

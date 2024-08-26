@@ -9,13 +9,11 @@ import tempfile
 import string
 import json
 import re
+from datetime import date
 from bd.models.models import AsientosContables,Bitacora,CuentasContables,Empresas,Departamentos,PlanCuentas,RegistrosMovimientos,Reportes,Usuarios,CierreContable,CuentasPrincipales,MovimientosPlan,MovimientosUsuarios
 from email.message import EmailMessage
-import ssl
-import smtplib
-import pyautogui
 import openpyxl
-
+import random
 
 app = FastAPI()
 
@@ -30,7 +28,14 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+
 )
+
+# Función para generar un código aleatorio de hasta 20 caracteres
+def generar_codigo_aleatorio(longitud=20):
+    caracteres = string.ascii_letters + string.digits
+    codigo_aleatorio = ''.join(random.choices(caracteres, k=longitud))
+    return codigo_aleatorio
 
 def validar_secuencia(codigos):
     nivel_anterior = []
@@ -85,6 +90,22 @@ class CuentaContableSchema(BaseModel):
     tipo_asiento: str  # Tipo de asiento relacionado con tipo_cuenta
     documento_respaldo: str  # Documento de respaldo relacionado con tipo_cuenta
     
+def determinar_nivel_tipo(codigo: str) -> str:
+    # Determinar el tipo de cuenta según el primer dígito del código
+    if codigo.startswith("1"):
+        return "Activos"
+    elif codigo.startswith("2"):
+        return "Pasivos"
+    elif codigo.startswith("3"):
+        return "Capital/Patrimonio"
+    elif codigo.startswith("4"):
+        return "Ingresos"
+    elif codigo.startswith("5"):
+        return "CMV"
+    elif codigo.startswith("6"):
+        return "Egresos"
+    else:
+        return "Desconocido"
 
 class BuscarEmpresaRequest(BaseModel):
     query: str
@@ -175,18 +196,6 @@ def crear_cuentas_y_plan(empresa_id: int, cuentas: list[CuentaContableSchema]):
             session.add(nueva_cuenta)
             session.commit()
 
-            # Crear asiento contable
-            nuevo_asiento = AsientosContables(
-                cuentas_contables_id=nueva_cuenta.id_cuenta_contable,
-                cuentas_contables_empresas_id=empresa_id,
-                fecha=cuenta.fecha,
-                descripcion_asiento=cuenta.descripcion_cuenta,
-                tipo_asiento=cuenta.tipo_cuenta,  # tipo_asiento viene de tipo_cuenta
-                documento_respaldo=cuenta.documento_respaldo,
-                plan_cuentas_id=nuevo_plan.id_plan_cuentas  # Usar el nuevo plan de cuentas
-            )
-            session.add(nuevo_asiento)
-            session.commit()
 
         return {"message": "Plan de cuentas y asientos contables creados con éxito."}
 
@@ -197,38 +206,9 @@ def crear_cuentas_y_plan(empresa_id: int, cuentas: list[CuentaContableSchema]):
 
 @app.get("/empresas/{empresa_id}/planes")
 def obtener_planes(empresa_id: int):
-    planes = session.query(PlanCuentas).filter(PlanCuentas.registro_empresas == empresa_id).all()
-    return planes
+    plan_cuentas = session.query(PlanCuentas).filter(PlanCuentas.id_empresas == empresa_id).all()
+    return plan_cuentas
 
-@app.post("/empresas/{empresa_id}/crear-reporte")
-def crear_reporte(empresa_id: int, reporte_data: ReporteCreate):
-    # Verificar que la empresa existe
-    empresa = session.query(Empresas).filter(Empresas.id_empresas == empresa_id).first()
-    if not empresa:
-        raise HTTPException(status_code=404, detail="Empresa no encontrada")
-
-    # Crear el reporte
-    nuevo_reporte = Reportes(
-        tipo_reporte="Libro Diario",
-        fecha_inicio=reporte_data.fecha_inicio,
-        fecha_fin=reporte_data.fecha_fin,
-        nivel_detalle=reporte_data.nivel_detalle,
-        formato=reporte_data.formato,
-        archivo=""  # Aquí se generaría y guardaría el archivo del reporte
-    )
-    session.add(nuevo_reporte)
-    session.commit()
-
-    # Obtener los registros de movimientos para el reporte
-    movimientos = session.query(RegistrosMovimientos).filter(
-        RegistrosMovimientos.Empresas_id == empresa_id,
-        RegistrosMovimientos.Fecha_movimiento >= reporte_data.fecha_inicio,
-        RegistrosMovimientos.Fecha_movimiento <= reporte_data.fecha_fin
-    ).all()
-
-    # Aquí iría la lógica para generar el archivo del reporte basado en los movimientos obtenidos
-
-    return {"message": "Reporte creado con éxito", "reporte_id": nuevo_reporte.id_reporte}
 
 @app.post("/login/")
 async def otro(objeto: Item):
@@ -242,73 +222,154 @@ async def otro(objeto: Item):
     else:
         return {"correo": correox}
 
-@app.post("/empresas/crear-plan/")
-async def crear_plan(archivo: UploadFile = File(...)):
+@app.post("/empresas/{empresa_id}/crear-plan")
+async def crear_plan(empresa_id: int, archivo: UploadFile = File(...)):
     if not archivo.filename.endswith('.xlsx'):
         raise HTTPException(status_code=400, detail="El archivo debe ser un archivo Excel con extensión .xlsx")
 
     try:
-        # Crear un archivo temporal para guardar el contenido
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as temp_file:
-            temp_file.write(await archivo.read())
-            temp_file.flush()
+        # Crear un archivo permanente en el sistema de archivos
+        carpeta = "uploads"  # Cambia esta ruta al directorio deseado
+        if not os.path.exists(carpeta):
+            os.makedirs(carpeta)
 
-            # Cargar el archivo Excel con openpyxl
-            workbook = openpyxl.load_workbook(temp_file.name)
-            hoja = workbook.active
+        ruta_archivo = os.path.join(carpeta, archivo.filename)
+        
+        # Guardar el archivo
+        with open(ruta_archivo, "wb") as buffer:
+            buffer.write(await archivo.read())
 
-            # Leer las celdas (ajusta el rango según tus datos)
-            celdas = hoja['A1':'F325']
-            resultados = []
-            codigos = []
-            ultimo_nivel = 0
+        # Cargar el archivo Excel con openpyxl
+        workbook = openpyxl.load_workbook(ruta_archivo)
+        hoja = workbook.active
 
-            for fila in celdas:
-                valor_celda_1 = str(fila[0].value) if fila[0].value is not None else ""
-                valor_celda_2 = str(fila[1].value) if fila[1].value is not None else ""
-                valor_celda_3 = str(fila[2].value) if fila[2].value is not None else ""
+        # Leer las celdas (ajusta el rango según tus datos)
+        celdas = hoja['A1':'C325']
+        resultados = []
+        codigos = []
+        ultimo_nivel = 0
 
+        for fila in celdas:
+            valor_celda_1 = str(fila[0].value) if fila[0].value is not None else ""
+            valor_celda_2 = str(fila[1].value) if fila[1].value is not None else ""
+            valor_celda_3 = float(fila[2].value) if fila[2].value is not None else 0.0
 
-                # Si el código de cuenta está vacío, lo ignoramos
-                if not valor_celda_1:
-                    continue
+            if not valor_celda_1:
+                continue
 
-                # Contar la cantidad de puntos en el código para determinar el nivel
-                nivel_actual = valor_celda_1.count('.')
+            nivel_actual = valor_celda_1.count('.')
+            if nivel_actual > ultimo_nivel + 1:
+                raise HTTPException(status_code=400, detail=f"Error en el código {valor_celda_1}: el código no sigue la jerarquía adecuada.")
 
-                # Validación: el nivel actual no puede saltar más de un nivel de detalle
-                if nivel_actual > ultimo_nivel + 1:
-                    raise HTTPException(status_code=400, detail=f"Error en el código {valor_celda_1}: el código no sigue la jerarquía adecuada.")
+            ultimo_nivel = nivel_actual
+            codigos.append(valor_celda_1)
 
-                # Actualizar el último nivel procesado
-                ultimo_nivel = nivel_actual
+            tipo_cuenta = determinar_nivel_tipo(valor_celda_1)
 
-                # Agregar el código a la lista para validaciones adicionales
-                codigos.append(valor_celda_1)
+            dato = {
+                'codigo': valor_celda_1,
+                'descripcion': valor_celda_2,
+                'saldo_actual': valor_celda_3,
+                'tipo_cuenta': tipo_cuenta
+            }
+            resultados.append(dato)
 
-                # Agregar el dato al resultado final
-                dato = {
-                    'codigo': valor_celda_1,
-                    'descripcion': valor_celda_2,
-                    'saldo_actual': valor_celda_3
-                }
-                resultados.append(dato)
+        validar_secuencia(codigos)
 
-            # Validar la secuencia de códigos para evitar retrocesos indebidos
-            validar_secuencia(codigos)
+        # Crear el plan de cuentas
+        nuevo_plan = PlanCuentas(
+            codigo=generar_codigo_aleatorio(),
+            descripcion_cuenta="Plan de cuentas para la empresa " + str(empresa_id),
+            id_empresas=empresa_id
+        )
+        session.add(nuevo_plan)
+        session.commit()
+        session.refresh(nuevo_plan)
+        
+        # Verificar si el departamento existe
+        departamento = session.query(Departamentos).filter_by(id_empresa=empresa_id).first()
+        if not departamento:
+            raise HTTPException(status_code=404, detail="El departamento especificado no existe.")
 
+        # Crear un nuevo registro de movimiento en registros_movimientos
+        nuevo_movimiento = RegistrosMovimientos(
+            fecha_movimiento=date.today(),
+            id_empresas=empresa_id,
+            nro_control=generar_codigo_aleatorio(),
+            nro_documentos=ruta_archivo,
+            id_departamentos=departamento.id_departamento  # Asegurando que el departamento no sea None
+        )
+        session.add(nuevo_movimiento)
+        session.commit()
+        session.refresh(nuevo_movimiento)
+
+        # Crear un nuevo movimiento en movimientos_plan relacionado con el registro de movimiento creado y el plan de cuentas creado
+        nuevo_movimiento_plan = MovimientosPlan(
+            id_plan_cuentas=nuevo_plan.id_plan_cuentas,
+            id_registro=nuevo_movimiento.id_registros_movimientos
+        )
+        session.add(nuevo_movimiento_plan)
+        session.commit()
+        session.refresh(nuevo_movimiento_plan)
+
+        # Insertar cada cuenta en la tabla PlanCuentas
+        for resultado in resultados:
+            nueva_cuenta = CuentasContables(
+                codigo=resultado['codigo'],
+                nombre_cuenta=resultado['descripcion'],
+                nivel_cuenta="Nivel calculado",
+                tipo_cuenta=resultado['tipo_cuenta'],
+                saldo_normal=resultado['saldo_actual'],
+                estado_cuenta="Activo",
+                id_plan_cuenta=nuevo_plan.id_plan_cuentas
+            )
+            session.add(nueva_cuenta)
+
+        session.commit()
 
         return {"resultados": resultados}
 
     except HTTPException as he:
+        session.rollback()
         raise he
     except Exception as e:
+        session.rollback()
         raise HTTPException(status_code=500, detail=f"Error al procesar el archivo: {str(e)}")
-
     finally:
-        # Eliminar el archivo temporal
-        if os.path.exists(temp_file.name):
-            os.remove(temp_file.name)
+        session.close()
+
+@app.get("/empresas/{empresa_id}/planes/{plan_id}/cuentas")
+def obtener_cuentas_del_plan(empresa_id: int, plan_id: int):
+    # Verificar que el plan de cuentas pertenece a la empresa especificada
+    plan_cuentas = session.query(PlanCuentas).filter_by(id_plan_cuentas=plan_id, id_empresas=empresa_id).first()
+    if not plan_cuentas:
+        raise HTTPException(status_code=404, detail="El plan de cuentas no fue encontrado para esta empresa.")
+
+    # Obtener todas las cuentas del plan
+    cuentas = session.query(CuentasContables).filter_by(id_plan_cuenta=plan_id).all()
+
+    # Separar cuentas principales de cuentas normales
+    cuentas_principales = []
+    cuentas_normales = []
+
+    for cuenta in cuentas:
+        if cuenta.saldo_normal == 0:  # Ajusta esta condición según cómo determines las cuentas principales
+            cuentas_principales.append({
+                "codigo": cuenta.codigo,
+                "descripcion": cuenta.nombre_cuenta,
+                "saldo": cuenta.saldo_normal
+            })
+        else:
+            cuentas_normales.append({
+                "codigo": cuenta.codigo,
+                "descripcion": cuenta.nombre_cuenta,
+                "saldo": cuenta.saldo_normal
+            })
+
+    return {
+        "cuentas_principales": cuentas_principales,
+        "cuentas_normales": cuentas_normales
+    }
 """@app.post("/registro")
 async def registro(archivo : registro):
 

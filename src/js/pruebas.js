@@ -19,10 +19,9 @@ $(function () {
     $("#search-results").on('click', '.select-btn', function () {
         const empresaId = $(this).data('id');
         const empresaNombre = $(this).data('nombre');
-        console.log("ID de la empresa seleccionada:", empresaId); // Verifica que capture el ID correctamente
+        console.log("ID de la empresa seleccionada:", empresaId);
         localStorage.setItem('empresaSeleccionada', JSON.stringify({ id: empresaId, nombre: empresaNombre }));
-        // Resto del código AJAX para obtener o crear planes de cuentas
-    
+
         obtenerPlanesCuentas(empresaId);
     });
 
@@ -33,9 +32,9 @@ $(function () {
             contentType: 'application/json',
             success: function (response) {
                 if (response.length > 0) {
-                    displayPlanesDeCuentas(response); // Mostrar los planes de cuentas existentes
+                    displayPlanesDeCuentas(response, empresaId);
                 } else {
-                    showCreatePlanButton(); // Mostrar el botón para crear un nuevo plan
+                    showCreatePlanButton();
                 }
             },
             error: function (error) {
@@ -44,7 +43,7 @@ $(function () {
         });
     }
 
-    function displayPlanesDeCuentas(planes) {
+    function displayPlanesDeCuentas(planes, empresaId) {
         const planesDiv = $("#planes-de-cuentas");
         planesDiv.empty();
         planes.forEach(plan => {
@@ -52,11 +51,17 @@ $(function () {
                 <div>
                     <p><strong>Código:</strong> ${plan.codigo}</p>
                     <p><strong>Descripción:</strong> ${plan.descripcion_cuenta}</p>
-                    <p><strong>Estado:</strong> ${plan.estado}</p>
-                    <!-- Agrega más detalles del plan de cuentas según sea necesario -->
+                    <button class="modificar-plan-btn" data-id="${plan.id_plan_cuentas}" data-empresa-id="${empresaId}">Modificar</button>
                 </div>
             `);
             planesDiv.append(planDiv);
+        });
+
+        // Delegar evento para los botones de modificar plan
+        planesDiv.on('click', '.modificar-plan-btn', function () {
+            const planId = $(this).data('id');
+            const empresaId = $(this).data('empresa-id');
+            window.location.href = `modificar_plan.html?planId=${planId}&empresaId=${empresaId}`;
         });
     }
 
@@ -68,12 +73,11 @@ $(function () {
         $("#planes-de-cuentas").empty().append(createButton);
     }
 
-    // Función para mostrar resultados de búsqueda de empresas
     function displaySearchResults(empresas) {
         const resultsDiv = $("#search-results");
         resultsDiv.empty();
         empresas.forEach(empresa => {
-            console.log("Datos de la empresa:", empresa); // Verifica todos los datos de la empresa recibidos
+            console.log("Datos de la empresa:", empresa);
             const empresaDiv = $(`
                 <div>
                     <span>${empresa.nombre}</span>
