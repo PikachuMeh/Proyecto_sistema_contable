@@ -338,6 +338,32 @@ async def crear_plan(empresa_id: int, archivo: UploadFile = File(...)):
     finally:
         session.close()
 
+@app.post("/cuentas/{cuenta_id}/actualizar-principal")
+def actualizar_cuenta_principal(cuenta_id: int, es_principal: bool):
+    # Obtener la cuenta contable
+    cuenta = session.query(CuentasContables).filter_by(id_cuenta_contable=cuenta_id).first()
+    if not cuenta:
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada.")
+
+    # Actualizar el estado de cuenta principal
+    if es_principal:
+        # Marcar como cuenta principal si no lo es ya
+        cuenta_principal = CuentasPrincipales(
+            codigo=cuenta.codigo,
+            nombre_cuenta=cuenta.nombre_cuenta,
+            nivel_cuenta=cuenta.nivel_cuenta,
+            tipo_cuenta=cuenta.tipo_cuenta,
+            id_cuenta_contable=cuenta.id_cuenta_contable
+        )
+        session.add(cuenta_principal)
+    else:
+        # Desmarcar como cuenta principal
+        session.query(CuentasPrincipales).filter_by(id_cuenta_contable=cuenta_id).delete()
+
+    session.commit()
+
+    return {"mensaje": "Actualización exitosa"}
+
 @app.get("/empresas/{empresa_id}/planes/{plan_id}/cuentas")
 def obtener_cuentas_del_plan(empresa_id: int, plan_id: int):
     # Verificar que el plan de cuentas pertenece a la empresa especificada
@@ -348,28 +374,19 @@ def obtener_cuentas_del_plan(empresa_id: int, plan_id: int):
     # Obtener todas las cuentas del plan
     cuentas = session.query(CuentasContables).filter_by(id_plan_cuenta=plan_id).all()
 
-    # Separar cuentas principales de cuentas normales
-    cuentas_principales = []
-    cuentas_normales = []
-
+    resultado = []
     for cuenta in cuentas:
-        if cuenta.saldo_normal == 0:  # Ajusta esta condición según cómo determines las cuentas principales
-            cuentas_principales.append({
-                "codigo": cuenta.codigo,
-                "descripcion": cuenta.nombre_cuenta,
-                "saldo": cuenta.saldo_normal
-            })
-        else:
-            cuentas_normales.append({
-                "codigo": cuenta.codigo,
-                "descripcion": cuenta.nombre_cuenta,
-                "saldo": cuenta.saldo_normal
-            })
+        # Verificar si es una cuenta principal
+        es_principal = session.query(CuentasPrincipales).filter_by(id_cuenta_contable=cuenta.id_cuenta_contable).first() is not None
+        resultado.append({
+            "id_cuenta_contable": cuenta.id_cuenta_contable,
+            "codigo": cuenta.codigo,
+            "nombre_cuenta": cuenta.nombre_cuenta,
+            "saldo_normal": cuenta.saldo_normal,
+            "es_principal": es_principal
+        })
 
-    return {
-        "cuentas_principales": cuentas_principales,
-        "cuentas_normales": cuentas_normales
-    }
+    return resultado
 """@app.post("/registro")
 async def registro(archivo : registro):
 

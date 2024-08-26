@@ -42,7 +42,7 @@ $(function () {
             }
         });
     }
-
+    
     function displayPlanesDeCuentas(planes, empresaId) {
         const planesDiv = $("#planes-de-cuentas");
         planesDiv.empty();
@@ -57,11 +57,11 @@ $(function () {
             planesDiv.append(planDiv);
         });
 
-        // Delegar evento para los botones de modificar plan
         planesDiv.on('click', '.modificar-plan-btn', function () {
             const planId = $(this).data('id');
             const empresaId = $(this).data('empresa-id');
-            window.location.href = `modificar_plan.html?planId=${planId}&empresaId=${empresaId}`;
+            localStorage.setItem('planIdSeleccionado', planId);  // Guarda el planId en localStorage
+            window.location.href = `modificar_plan.html`;
         });
     }
 
@@ -72,7 +72,7 @@ $(function () {
         });
         $("#planes-de-cuentas").empty().append(createButton);
     }
-
+    
     function displaySearchResults(empresas) {
         const resultsDiv = $("#search-results");
         resultsDiv.empty();

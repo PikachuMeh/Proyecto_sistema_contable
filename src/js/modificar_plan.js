@@ -1,51 +1,66 @@
-$(document).ready(function() {
-    const empresaSeleccionada = JSON.parse(localStorage.getItem('empresaSeleccionada'));
-    const planSeleccionado = JSON.parse(localStorage.getItem('planSeleccionado'));
+$(document).ready(function () {
+    const params = new URLSearchParams(window.location.search);
+    const planId = params.get('planId');
+    const empresaId = params.get('empresaId');
 
-    if (empresaSeleccionada && planSeleccionado) {
-        cargarCuentas(planSeleccionado.id_plan_cuentas);
-    } else {
-        alert('No se seleccionó un plan de cuentas válido.');
+    if (!planId || !empresaId) {
+        alert("No se ha seleccionado ningún plan de cuentas.");
+        window.location.href = "empresas.html";
+        return;
     }
 
-    function cargarCuentas(idPlanCuentas) {
+    // Cargar la información del plan de cuentas
+    cargarPlanDeCuentas(empresaId, planId);
+
+    function cargarPlanDeCuentas(empresaId, planId) {
         $.ajax({
-            url: `http://localhost:9000/planes/${idPlanCuentas}/cuentas`,
+            url: `http://localhost:9000/empresas/${empresaId}/planes/${planId}/cuentas`,
             method: 'GET',
             contentType: 'application/json',
-            success: function(response) {
-                mostrarCuentas(response);
+            success: function (response) {
+                displayCuentasContables(response);
             },
-            error: function(error) {
-                console.error('Error al cargar las cuentas:', error);
+            error: function (error) {
+                console.error('Error al cargar el plan de cuentas:', error);
+                alert('Hubo un error al cargar el plan de cuentas.');
+                window.location.href = "empresas.html";
             }
         });
     }
 
-    function mostrarCuentas(cuentas) {
-        const cuentasPrincipalesDiv = $("#cuentas-principales");
-        const cuentasNormalesDiv = $("#cuentas-normales");
-
-        cuentasPrincipalesDiv.empty();
-        cuentasNormalesDiv.empty();
-
-        cuentasPrincipalesDiv.append("<h2>Cuentas Principales</h2>");
-        cuentasNormalesDiv.append("<h2>Cuentas Normales</h2>");
+    function displayCuentasContables(cuentas) {
+        const cuentasDiv = $("#cuentas-contables");
+        cuentasDiv.empty();
 
         cuentas.forEach(cuenta => {
             const cuentaDiv = $(`
                 <div>
-                    <p><strong>Código:</strong> ${cuenta.codigo}</p>
-                    <p><strong>Descripción:</strong> ${cuenta.descripcion}</p>
-                    <p><strong>Saldo:</strong> ${cuenta.saldo_normal}</p>
+                    <input type="checkbox" class="principal-checkbox" data-id="${cuenta.id_cuenta_contable}" ${cuenta.es_principal ? 'checked' : ''}>
+                    <label><strong>${cuenta.codigo}:</strong> ${cuenta.nombre_cuenta} (Saldo: ${cuenta.saldo_normal})</label>
                 </div>
             `);
-
-            if (cuenta.tipo_cuenta === 'Principal') {
-                cuentasPrincipalesDiv.append(cuentaDiv);
-            } else {
-                cuentasNormalesDiv.append(cuentaDiv);
-            }
+            cuentasDiv.append(cuentaDiv);
         });
     }
+
+    // Manejar el cambio de la selección de cuentas principales
+    $("#cuentas-contables").on('change', '.principal-checkbox', function () {
+        const cuentaId = $(this).data('id');
+        const esPrincipal = $(this).is(':checked');
+
+        // Actualizar la cuenta contable en el servidor
+        $.ajax({
+            url: `http://localhost:9000/cuentas/${cuentaId}/actualizar-principal`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ es_principal: esPrincipal }),
+            success: function (response) {
+                console.log('Cuenta contable actualizada con éxito:', response);
+            },
+            error: function (error) {
+                console.error('Error al actualizar la cuenta contable:', error);
+                alert('Hubo un error al actualizar la cuenta contable.');
+            }
+        });
+    });
 });
