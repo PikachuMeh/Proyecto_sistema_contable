@@ -60,7 +60,10 @@ $(function () {
         planesDiv.on('click', '.modificar-plan-btn', function () {
             const planId = $(this).data('id');
             const empresaId = $(this).data('empresa-id');
-            localStorage.setItem('planIdSeleccionado', planId);  // Guarda el planId en localStorage
+            localStorage.setItem('planIdSeleccionado', planId);
+            localStorage.setItem('empresaIdSeleccionada', empresaId);
+            console.log(localStorage.getItem('planIdSeleccionado'));
+            console.log(localStorage.getItem('empresaIdSeleccionada'));  // Guarda el planId en localStorage
             window.location.href = `modificar_plan.html`;
         });
     }

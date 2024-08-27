@@ -129,7 +129,10 @@ class ReporteCreate(BaseModel):
     fecha_fin: str
     nivel_detalle: str
     formato: str    
-    
+
+class ActualizarPrincipalRequest(BaseModel):
+    es_principal: bool
+
 class CuentaContableSchema(BaseModel):
     codigo_cuenta: str
     descripcion_cuenta: str
@@ -140,7 +143,12 @@ class CuentaContableSchema(BaseModel):
     fecha: str
     estado: str
     documento_respaldo: str
-        
+
+class CuentaNueva(BaseModel):
+    codigo: str
+    descripcion: str
+    saldo: float
+
 @app.get("/")
 async def index():
     
@@ -339,14 +347,14 @@ async def crear_plan(empresa_id: int, archivo: UploadFile = File(...)):
         session.close()
 
 @app.post("/cuentas/{cuenta_id}/actualizar-principal")
-def actualizar_cuenta_principal(cuenta_id: int, es_principal: bool):
+def actualizar_cuenta_principal(cuenta_id: int, request: ActualizarPrincipalRequest):
     # Obtener la cuenta contable
     cuenta = session.query(CuentasContables).filter_by(id_cuenta_contable=cuenta_id).first()
     if not cuenta:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada.")
-
+    
     # Actualizar el estado de cuenta principal
-    if es_principal:
+    if request.es_principal:
         # Marcar como cuenta principal si no lo es ya
         cuenta_principal = CuentasPrincipales(
             codigo=cuenta.codigo,
@@ -366,17 +374,21 @@ def actualizar_cuenta_principal(cuenta_id: int, es_principal: bool):
 
 @app.get("/empresas/{empresa_id}/planes/{plan_id}/cuentas")
 def obtener_cuentas_del_plan(empresa_id: int, plan_id: int):
+    print(f"Recibido empresa_id: {empresa_id}, plan_id: {plan_id}")
+    
     # Verificar que el plan de cuentas pertenece a la empresa especificada
     plan_cuentas = session.query(PlanCuentas).filter_by(id_plan_cuentas=plan_id, id_empresas=empresa_id).first()
+    
     if not plan_cuentas:
+        print(f"No se encontró un plan de cuentas para empresa_id={empresa_id}, plan_id={plan_id}")
         raise HTTPException(status_code=404, detail="El plan de cuentas no fue encontrado para esta empresa.")
-
-    # Obtener todas las cuentas del plan
+    
+    print(f"Plan de cuentas encontrado: {plan_cuentas.descripcion_cuenta}")
+    
     cuentas = session.query(CuentasContables).filter_by(id_plan_cuenta=plan_id).all()
 
     resultado = []
     for cuenta in cuentas:
-        # Verificar si es una cuenta principal
         es_principal = session.query(CuentasPrincipales).filter_by(id_cuenta_contable=cuenta.id_cuenta_contable).first() is not None
         resultado.append({
             "id_cuenta_contable": cuenta.id_cuenta_contable,
@@ -386,7 +398,42 @@ def obtener_cuentas_del_plan(empresa_id: int, plan_id: int):
             "es_principal": es_principal
         })
 
+    print(f"Se encontraron {len(resultado)} cuentas para el plan_id: {plan_id}")
     return resultado
+
+@app.post("/empresas/{empresa_id}/planes/{plan_id}/cuentas")
+def agregar_cuenta(empresa_id: int, plan_id: int, cuenta: CuentaNueva):
+    # Verificar que el plan de cuentas pertenece a la empresa especificada
+    plan_cuentas = session.query(PlanCuentas).filter_by(id_plan_cuentas=plan_id, id_empresas=empresa_id).first()
+    
+    if not plan_cuentas:
+        raise HTTPException(status_code=404, detail="El plan de cuentas no fue encontrado para esta empresa.")
+    
+    # Verificar si el código de cuenta ya existe en el plan
+    existe_cuenta = session.query(CuentasContables).filter_by(id_plan_cuenta=plan_id, codigo=cuenta.codigo).first()
+    if existe_cuenta:
+        raise HTTPException(status_code=400, detail="El código de cuenta ya existe en este plan de cuentas.")
+    
+    # Determinar nivel y tipo de cuenta
+    nivel_cuenta = cuenta.codigo.count('.') + 1  # Por ejemplo, '1.1.2' tiene nivel 3
+    tipo_cuenta = determinar_nivel_tipo(cuenta.codigo)  # Usa la función para determinar el tipo de cuenta
+    
+    # Crear la nueva cuenta
+    nueva_cuenta = CuentasContables(
+        codigo=cuenta.codigo,
+        nombre_cuenta=cuenta.descripcion,
+        nivel_cuenta=nivel_cuenta,
+        tipo_cuenta=tipo_cuenta,
+        saldo_normal=cuenta.saldo,
+        estado_cuenta="Activo",  # Ajustar según tu lógica de negocio
+        id_plan_cuenta=plan_id
+    )
+    session.add(nueva_cuenta)
+    session.commit()
+    
+    return {"mensaje": "Cuenta agregada con éxito."}
+
+
 """@app.post("/registro")
 async def registro(archivo : registro):
 
