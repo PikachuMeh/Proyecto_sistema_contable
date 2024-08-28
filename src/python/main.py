@@ -148,6 +148,15 @@ class CuentaNueva(BaseModel):
     codigo: str
     descripcion: str
     saldo: float
+class EmpresaCreateRequest(BaseModel):
+    nombre: str = Field(..., min_length=1)
+    fecha_constitucion: date = Field(...)
+    rif: str = Field(..., min_length=1, max_length=10)
+    fecha_ejercicio_economico: date = Field(...)
+    fecha_contable: date = Field(...)
+    actividad_economica: str = Field(..., min_length=1)
+    direccion: str = Field(..., min_length=1)
+    correo: str = Field(..., min_length=1)
 
 @app.get("/")
 async def index():
@@ -434,6 +443,28 @@ def agregar_cuenta(empresa_id: int, plan_id: int, cuenta: CuentaNueva):
     return {"mensaje": "Cuenta agregada con éxito."}
 
 
+@app.post("/empresas/crear")
+def crear_empresa(empresa: EmpresaCreateRequest):
+    # Verificar si el RIF ya existe en la base de datos
+    existe_empresa = session.query(Empresas).filter_by(rif=empresa.rif).first()
+    if existe_empresa:
+        raise HTTPException(status_code=400, detail="Ya existe una empresa con este RIF.")
+
+    # Crear la nueva empresa
+    nueva_empresa = Empresas(
+        nombre=empresa.nombre,
+        fecha_constitucion=empresa.fecha_constitucion,
+        rif=empresa.rif,
+        fecha_ejercicio_economico=empresa.fecha_ejercicio_economico,
+        fecha_contable=empresa.fecha_contable,
+        actividad_economica=empresa.actividad_economica,
+        direccion=empresa.direccion,
+        correo=empresa.correo
+    )
+    session.add(nueva_empresa)
+    session.commit()
+
+    return {"mensaje": "Empresa creada con éxito."}
 """@app.post("/registro")
 async def registro(archivo : registro):
 

@@ -90,4 +90,9 @@ $(function () {
             resultsDiv.append(empresaDiv);
         });
     }
+
+    // Manejo del botón para crear una nueva empresa
+    $("#crear-empresa-btn").click(function () {
+        window.location.href = 'crear_empresa.html';
+    });
 });

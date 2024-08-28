@@ -10,7 +10,9 @@ $(document).ready(function () {
 
     // Cargar la información del plan de cuentas
     cargarPlanDeCuentas(empresaId, planId);
-
+    $("#volver-listado").click(function () {
+        window.location.href = "empresas.html";
+    });
     function cargarPlanDeCuentas(empresaId, planId) {
         $.ajax({
             url: `http://localhost:9000/empresas/${empresaId}/planes/${planId}/cuentas`,
