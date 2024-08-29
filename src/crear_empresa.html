@@ -1,45 +1,53 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Nueva Empresa</title>
+    <title>Crear Empresa</title>
     <script src="js/jquery-3.7.1.min.js"></script>
 </head>
 <body>
-    <h1>Crear Nueva Empresa</h1>
+    <h1>Crear Empresa</h1>
 
-    <form id="crear-empresa-form">
+    <form id="crearEmpresaForm">
+        <!-- Campos de la empresa -->
         <label for="nombre">Nombre de la Empresa:</label>
         <input type="text" id="nombre" name="nombre" required><br><br>
 
         <label for="fecha_constitucion">Fecha de Constitución:</label>
         <input type="date" id="fecha_constitucion" name="fecha_constitucion" required><br><br>
 
-        <label for="rif">RIF de la Empresa:</label>
-        <input type="text" id="rif" name="rif" required><br><br>
+        <label for="tipo_rif">Tipo de RIF:</label>
+        <select id="tipo_rif" name="tipo_rif" required>
+            <option value="J">J</option>
+            <option value="G">G</option>
+            <option value="V">V</option>
+            <option value="E">E</option>
+        </select>
+        <label for="rif_numero">Número de RIF:</label>
+        <input type="text" id="rif_numero" name="rif_numero" required><br><br>
 
-        <label for="fecha_ejercicio_economico">Fecha de Inicio de Ejercicio Económico:</label>
+        <label for="fecha_ejercicio_economico">Fecha de Ejercicio Económico:</label>
         <input type="date" id="fecha_ejercicio_economico" name="fecha_ejercicio_economico" required><br><br>
-
-        <label for="fecha_contable">Fecha de Inicio de Contabilidad:</label>
-        <input type="date" id="fecha_contable" name="fecha_contable" required><br><br>
 
         <label for="actividad_economica">Actividad Económica:</label>
         <input type="text" id="actividad_economica" name="actividad_economica" required><br><br>
 
-        <label for="direccion">Dirección de la Empresa:</label>
+        <label for="direccion">Dirección:</label>
         <input type="text" id="direccion" name="direccion" required><br><br>
 
-        <label for="correo">Correo de la Empresa:</label>
+        <label for="correo">Correo:</label>
         <input type="email" id="correo" name="correo" required><br><br>
+
+        <!-- Sección para agregar departamentos -->
+        <h2>Agregar Departamentos</h2>
+        <label for="nombre_departamento">Nombre del Departamento:</label>
+        <input type="text" id="nombre_departamento" name="nombre_departamento">
+        <button type="button" id="agregar-departamento-btn">Agregar Departamento</button><br><br>
+
+        <ul id="lista-departamentos"></ul>
 
         <button type="submit">Crear Empresa</button>
     </form>
-
-    <div id="mensaje"></div>
-
-    <button id="volver-btn">Volver al Listado de Empresas</button>
 
     <script src="js/crear_empresa.js"></script>
 </body>

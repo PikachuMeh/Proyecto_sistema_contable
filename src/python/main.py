@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from typing import Union
+from typing import Union, List
 from pydantic import BaseModel,Field
 from fastapi import FastAPI,HTTPException,Depends,File,UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -148,15 +148,19 @@ class CuentaNueva(BaseModel):
     codigo: str
     descripcion: str
     saldo: float
+
+class DepartamentoCreateRequest(BaseModel):
+    nombre_departamento: str
+
 class EmpresaCreateRequest(BaseModel):
-    nombre: str = Field(..., min_length=1)
-    fecha_constitucion: date = Field(...)
-    rif: str = Field(..., min_length=1, max_length=10)
-    fecha_ejercicio_economico: date = Field(...)
-    fecha_contable: date = Field(...)
-    actividad_economica: str = Field(..., min_length=1)
-    direccion: str = Field(..., min_length=1)
-    correo: str = Field(..., min_length=1)
+    nombre: str
+    fecha_constitucion: str
+    rif: str
+    fecha_ejercicio_economico: str
+    actividad_economica: str
+    direccion: str
+    correo: str
+    departamentos: List[DepartamentoCreateRequest] = []
 
 @app.get("/")
 async def index():
@@ -456,15 +460,28 @@ def crear_empresa(empresa: EmpresaCreateRequest):
         fecha_constitucion=empresa.fecha_constitucion,
         rif=empresa.rif,
         fecha_ejercicio_economico=empresa.fecha_ejercicio_economico,
-        fecha_contable=empresa.fecha_contable,
         actividad_economica=empresa.actividad_economica,
         direccion=empresa.direccion,
         correo=empresa.correo
     )
     session.add(nueva_empresa)
     session.commit()
+    session.refresh(nueva_empresa)  # Obtener el ID de la empresa recién creada
 
-    return {"mensaje": "Empresa creada con éxito."}
+    # Crear los departamentos asociados
+    for depto in empresa.departamentos:
+        nuevo_departamento = Departamentos(
+            nombre_departamento=depto.nombre_departamento,
+            id_empresa=nueva_empresa.id_empresas
+        )
+        session.add(nuevo_departamento)
+
+    session.commit()
+
+    return {"mensaje": "Empresa y departamentos creados con éxito.", "empresa_id": nueva_empresa.id_empresas}
+
+
+
 """@app.post("/registro")
 async def registro(archivo : registro):
 

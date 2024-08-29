@@ -26,13 +26,18 @@ $(function () {
     });
 
     function obtenerPlanesCuentas(empresaId) {
+        // Limpiar el contenedor de planes de cuentas y el botón de generar asientos contables
+        $("#planes-de-cuentas").empty();
+        $("#asientos-contables-container").empty();
+
         $.ajax({
             url: `http://localhost:9000/empresas/${empresaId}/planes`,
             method: 'GET',
             contentType: 'application/json',
             success: function (response) {
                 if (response.length > 0) {
-                    displayPlanesDeCuentas(response, empresaId);
+                    // Verifica si hay cuentas contables para el primer plan de cuentas encontrado
+                    verificarCuentasContables(response[0].id_plan_cuentas, empresaId, response);
                 } else {
                     showCreatePlanButton();
                 }
@@ -42,10 +47,30 @@ $(function () {
             }
         });
     }
-    
+
+    function verificarCuentasContables(planId, empresaId, planes) {
+        $.ajax({
+            url: `http://localhost:9000/empresas/${empresaId}/planes/${planId}/cuentas`,
+            method: 'GET',
+            contentType: 'application/json',
+            success: function (response) {
+                if (response.length > 0) {
+                    displayPlanesDeCuentas(planes, empresaId);
+                    showGenerarAsientosButton();
+                } else {
+                    displayPlanesDeCuentas(planes, empresaId);
+                }
+            },
+            error: function (error) {
+                console.error('Error al verificar las cuentas contables:', error);
+            }
+        });
+    }
+
     function displayPlanesDeCuentas(planes, empresaId) {
         const planesDiv = $("#planes-de-cuentas");
         planesDiv.empty();
+
         planes.forEach(plan => {
             const planDiv = $(`
                 <div>
@@ -75,7 +100,15 @@ $(function () {
         });
         $("#planes-de-cuentas").empty().append(createButton);
     }
-    
+
+    function showGenerarAsientosButton() {
+        const generarAsientosBtn = $("<button id='generar-asientos-btn'>Generar Asientos Contables</button>");
+        generarAsientosBtn.click(function () {
+            window.location.href = 'generar_asientos.html'; // Redirige a la página de generar asientos contables
+        });
+        $("#asientos-contables-container").append(generarAsientosBtn);
+    }
+
     function displaySearchResults(empresas) {
         const resultsDiv = $("#search-results");
         resultsDiv.empty();
