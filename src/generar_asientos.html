@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Asientos Contables</title>
+    <script src="js/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <h1>Gestión de Asientos Contables</h1>
+
+    <div id="asientos-container">
+        <button id="crear-asiento-btn">Crear Nuevo Asiento Contable</button>
+        <div id="asiento-activo" style="display: none;">
+            <h2>Asiento Contable Actual</h2>
+            <div id="cuentas-seleccionadas"></div>
+            <button id="cerrar-asiento-btn">Cerrar Asiento Contable</button>
+        </div>
+    </div>
+
+    <div id="listado-cuentas">
+        <h2>Listado de Cuentas Disponibles</h2>
+        <div id="cuentas-disponibles"></div>
+    </div>
+
+    <script src="js/gestionar_asientos.js"></script>
+</body>
+</html>

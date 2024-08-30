@@ -9,7 +9,7 @@ import tempfile
 import string
 import json
 import re
-from datetime import date
+from datetime import date, datetime
 from bd.models.models import AsientosContables,Bitacora,CuentasContables,Empresas,Departamentos,PlanCuentas,RegistrosMovimientos,Reportes,Usuarios,CierreContable,CuentasPrincipales,MovimientosPlan,MovimientosUsuarios
 from email.message import EmailMessage
 import openpyxl
@@ -480,7 +480,61 @@ def crear_empresa(empresa: EmpresaCreateRequest):
 
     return {"mensaje": "Empresa y departamentos creados con éxito.", "empresa_id": nueva_empresa.id_empresas}
 
+@app.post("/asientos/{asiento_id}/cerrar")
+def cerrar_asiento_contable(asiento_id: int):
+    asiento = session.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
 
+    # Aquí puedes incluir la lógica para validar si el asiento cuadra
+    if asiento.debe != asiento.haber:
+        raise HTTPException(status_code=400, detail="El asiento contable no cuadra entre el debe y el haber.")
+
+    # Actualizar estado de cierre contable
+    cierre_contable = CierreContable(
+        estado="Cerrado",
+        id_plan_cuentas=asiento.id_plan_cuentas,
+        fecha_contable_apertura=asiento.fecha,
+        fecha_contable_cierre=datetime.date.today()
+    )
+    session.add(cierre_contable)
+    session.commit()
+
+    return {"mensaje": "Asiento contable cerrado con éxito."}
+
+
+@app.post("/asientos/{asiento_id}/cuentas")
+def agregar_cuentas_asiento(asiento_id: int, cuenta_data: dict):
+    cuenta_id = cuenta_data["cuentaId"]
+    checked = cuenta_data["checked"]
+
+    if checked:
+        # Agregar cuenta al asiento
+        asiento_cuenta = session.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
+        asiento_cuenta.id_cuenta_contable = cuenta_id
+        session.commit()
+    else:
+        # Eliminar cuenta del asiento
+        asiento_cuenta = session.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
+        asiento_cuenta.id_cuenta_contable = None
+        session.commit()
+
+    cuentas = session.query(CuentasContables).filter_by(id_cuenta_contable=cuenta_id).all()
+    return [{"codigo": c.codigo, "nombre_cuenta": c.nombre_cuenta, "debe": 0, "haber": 0} for c in cuentas]
+
+
+@app.post("/empresas/{empresa_id}/asientos")
+def crear_asiento_contable(empresa_id: int, plan_id: int):
+    nuevo_asiento = AsientosContables(
+        id_cuenta_contable=None,  # Inicialmente sin cuenta
+        id_plan_cuentas=plan_id,
+        num_asiento=1,  # Debería generarse un número único para cada asiento
+        documento_respaldo='Sin documento',  # Cambiar según los datos de entrada
+        fecha=datetime.date.today(),
+        id_cuentas_principales=None  # Inicialmente sin cuenta principal
+    )
+    session.add(nuevo_asiento)
+    session.commit()
+
+    return {"asiento_id": nuevo_asiento.id_asiento_contable}
 
 """@app.post("/registro")
 async def registro(archivo : registro):
