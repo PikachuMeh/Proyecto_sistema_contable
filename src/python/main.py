@@ -10,7 +10,7 @@ import string
 import json
 import re
 from datetime import date, datetime
-from bd.models.models import AsientosContables,Bitacora,CuentasContables,Empresas,Departamentos,PlanCuentas,RegistrosMovimientos,Reportes,Usuarios,CierreContable,CuentasPrincipales,MovimientosPlan,MovimientosUsuarios
+from bd.models.models import AsientosContables,Bitacora,CuentasContables,Empresas,Departamentos,PlanCuentas,RegistrosMovimientos,Reportes,Comprobantes,TipoComprobante,Usuarios,CierreContable,CuentasPrincipales,MovimientosPlan,MovimientosUsuarios
 from email.message import EmailMessage
 import openpyxl
 import random
@@ -77,6 +77,16 @@ class registro(BaseModel):
 class recuperar(BaseModel):
     correo: str
 
+# Modelo para la creación de comprobante
+class ComprobanteCreateRequest(BaseModel):
+    titulo: str
+    descripcion: str
+    fecha: str
+    tipo_comprobante: int
+
+# Modelo para la creación de tipo de comprobante
+class TipoComprobanteCreateRequest(BaseModel):
+    nombre_comprobante: str
 
 class CuentaContableSchema(BaseModel):
     codigo_cuenta: str
@@ -124,12 +134,6 @@ class EmpresaSchema(BaseModel):
 class ErrorMessage(BaseModel):
     message: str
     
-class ReporteCreate(BaseModel):
-    fecha_inicio: str
-    fecha_fin: str
-    nivel_detalle: str
-    formato: str    
-
 class ActualizarPrincipalRequest(BaseModel):
     es_principal: bool
 
@@ -535,6 +539,40 @@ def crear_asiento_contable(empresa_id: int, plan_id: int):
     session.commit()
 
     return {"asiento_id": nuevo_asiento.id_asiento_contable}
+
+# Crear un tipo de comprobante
+@app.post("/tipo_comprobante/crear")
+def crear_tipo_comprobante(request: TipoComprobanteCreateRequest):
+    nuevo_tipo = TipoComprobante(nombre_comprobante=request.nombre_comprobante)
+    session.add(nuevo_tipo)
+    session.commit()
+    session.refresh(nuevo_tipo)
+    return {"mensaje": "Tipo de comprobante creado con éxito"}
+
+# Obtener los tipos de comprobante
+@app.get("/tipo_comprobante")
+def obtener_tipos_comprobante():
+    tipos = session.query(TipoComprobante).all()
+    return tipos
+
+# Crear un comprobante
+@app.post("/comprobantes/crear")
+def crear_comprobante(titulo: str, descripcion: str, fecha: str, tipo_comprobante: int, archivo: UploadFile = File(...)):
+    ruta_archivo = f"uploads/{archivo.filename}"
+    with open(ruta_archivo, "wb") as buffer:
+        buffer.write(archivo.file.read())
+
+    nuevo_comprobante = Comprobantes(
+        titulo=titulo,
+        descripcion=descripcion,
+        fecha=fecha,
+        archivo=ruta_archivo,
+        tipo_comprobante=tipo_comprobante
+    )
+    session.add(nuevo_comprobante)
+    session.commit()
+    session.refresh(nuevo_comprobante)
+    return {"mensaje": "Comprobante creado con éxito"}
 
 """@app.post("/registro")
 async def registro(archivo : registro):

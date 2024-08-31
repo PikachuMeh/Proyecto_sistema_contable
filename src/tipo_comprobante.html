@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tipos de Comprobante</title>
+    <script src="js/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <h1>Tipos de Comprobante</h1>
+
+    <form id="crearTipoComprobanteForm">
+        <label for="nombre_comprobante">Nombre del Tipo de Comprobante:</label>
+        <input type="text" id="nombre_comprobante" name="nombre_comprobante" required><br><br>
+
+        <button type="submit">Crear Tipo de Comprobante</button>
+    </form>
+
+    <h2>Listado de Tipos de Comprobante</h2>
+    <ul id="lista-tipos-comprobante">
+        <!-- Aquí se listarán los tipos de comprobante -->
+    </ul>
+
+    <script src="js/tipo_comprobante.js"></script>
+</body>
+</html>

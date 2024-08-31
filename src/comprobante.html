@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Comprobante</title>
+    <script src="js/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <h1>Crear Comprobante</h1>
+    
+    <form id="crearComprobanteForm">
+        <label for="titulo">Título:</label>
+        <input type="text" id="titulo" name="titulo" required><br><br>
+
+        <label for="descripcion">Descripción:</label>
+        <textarea id="descripcion" name="descripcion" required></textarea><br><br>
+
+        <label for="fecha">Fecha:</label>
+        <input type="date" id="fecha" name="fecha" required><br><br>
+
+        <label for="archivo">Archivo:</label>
+        <input type="file" id="archivo" name="archivo" required><br><br>
+
+        <label for="tipo_comprobante">Tipo de Comprobante:</label>
+        <select id="tipo_comprobante" name="tipo_comprobante" required>
+            <!-- Los tipos de comprobante se cargarán dinámicamente -->
+        </select><br><br>
+
+        <button type="submit">Crear Comprobante</button>
+    </form>
+
+    <script src="js/comprobante.js"></script>
+</body>
+</html>
