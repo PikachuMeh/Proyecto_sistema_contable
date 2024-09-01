@@ -4,7 +4,8 @@ from typing import Union, List
 from pydantic import BaseModel,Field
 from fastapi import FastAPI,HTTPException,Depends,File,UploadFile,Form
 from fastapi.middleware.cors import CORSMiddleware
-from bd.base import Base,session
+from bd.base import Base,SessionLocal
+from sqlalchemy.orm import Session,joinedload
 import tempfile
 import string
 import json
@@ -167,36 +168,43 @@ class EmpresaCreateRequest(BaseModel):
     correo: str
     departamentos: List[DepartamentoResponse] = []
 
+# Dependencia para obtener la sesión de base de datos
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 @app.get("/")
 async def index():
-    
     return "hola mundo!"
 
 @app.post("/buscar-empresas", response_model=list[EmpresaSchema])
-def buscar_empresas(request: BuscarEmpresaRequest):
-    empresas = session.query(Empresas).filter(Empresas.rif.ilike(f"%{request.query}%")).all()
+def buscar_empresas(request: BuscarEmpresaRequest, db: Session = Depends(get_db)):
+    empresas = db.query(Empresas).filter(Empresas.rif.ilike(f"%{request.query}%")).all()
     if not empresas:
         raise HTTPException(status_code=404, detail="No companies found")
     return empresas
 
 @app.get("/empresas/{empresa_id}/planes")
-def obtener_planes(empresa_id: int):
-    plan_cuentas = session.query(PlanCuentas).filter(PlanCuentas.id_empresas == empresa_id).all()
+def obtener_planes(empresa_id: int, db: Session = Depends(get_db)):
+    plan_cuentas = db.query(PlanCuentas).filter(PlanCuentas.id_empresas == empresa_id).all()
     return plan_cuentas
 
 @app.get("/empresas/{empresa_id}/departamentos", response_model=List[DepartamentoResponse])
-def obtener_departamentos_por_empresa(empresa_id: int):
-    departamentos = session.query(Departamentos).filter(Departamentos.id_empresa == empresa_id).all()
+def obtener_departamentos_por_empresa(empresa_id: int, db: Session = Depends(get_db)):
+    departamentos = db.query(Departamentos).filter(Departamentos.id_empresa == empresa_id).all()
     if not departamentos:
         raise HTTPException(status_code=404, detail="No se encontraron departamentos para esta empresa.")
     return departamentos
 
 @app.post("/login/")
-async def otro(objeto: Item):
+async def otro(objeto: Item, db: Session = Depends(get_db)):
     correo = objeto.correo
     password = objeto.contrasena
 
-    correox = session.query(Usuarios).where(Usuarios.correo == correo).first()
+    correox = db.query(Usuarios).where(Usuarios.correo == correo).first()
 
     if correox is None or password != correox.clave:
         return {"Falso": False}
@@ -204,7 +212,7 @@ async def otro(objeto: Item):
         return {"correo": correox}
 
 @app.post("/empresas/{empresa_id}/crear-plan")
-async def crear_plan(empresa_id: int, departamento_id: int = Form(...), archivo: UploadFile = File(...)):
+async def crear_plan(empresa_id: int, departamento_id: int = Form(...), archivo: UploadFile = File(...), db: Session = Depends(get_db)):
     if not archivo.filename.endswith('.xlsx'):
         raise HTTPException(status_code=400, detail="El archivo debe ser un archivo Excel con extensión .xlsx")
 
@@ -260,9 +268,9 @@ async def crear_plan(empresa_id: int, departamento_id: int = Form(...), archivo:
             descripcion_cuenta="Plan de cuentas para la empresa " + str(empresa_id),
             id_empresas=empresa_id
         )
-        session.add(nuevo_plan)
-        session.commit()
-        session.refresh(nuevo_plan)
+        db.add(nuevo_plan)
+        db.commit()
+        db.refresh(nuevo_plan)
 
         # Crear un nuevo registro de movimiento
         nuevo_movimiento = RegistrosMovimientos(
@@ -272,17 +280,17 @@ async def crear_plan(empresa_id: int, departamento_id: int = Form(...), archivo:
             nro_documentos=ruta_archivo,
             id_departamentos=departamento_id  # Asociar el departamento
         )
-        session.add(nuevo_movimiento)
-        session.commit()
-        session.refresh(nuevo_movimiento)
+        db.add(nuevo_movimiento)
+        db.commit()
+        db.refresh(nuevo_movimiento)
 
         nuevo_movimiento_plan = MovimientosPlan(
             id_plan_cuentas=nuevo_plan.id_plan_cuentas,
             id_registro=nuevo_movimiento.id_registros_movimientos
         )
-        session.add(nuevo_movimiento_plan)
-        session.commit()
-        session.refresh(nuevo_movimiento_plan)
+        db.add(nuevo_movimiento_plan)
+        db.commit()
+        db.refresh(nuevo_movimiento_plan)
 
         # Insertar cada cuenta contable en la base de datos
         for resultado in resultados:
@@ -295,31 +303,26 @@ async def crear_plan(empresa_id: int, departamento_id: int = Form(...), archivo:
                 estado_cuenta="Activo",
                 id_plan_cuenta=nuevo_plan.id_plan_cuentas
             )
-            session.add(nueva_cuenta)
+            db.add(nueva_cuenta)
 
-        session.commit()
+        db.commit()
 
         return {"resultados": resultados}
 
     except HTTPException as he:
-        session.rollback()
+        db.rollback()
         raise he
     except Exception as e:
-        session.rollback()
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al procesar el archivo: {str(e)}")
-    finally:
-        session.close()
 
 @app.post("/cuentas/{cuenta_id}/actualizar-principal")
-def actualizar_cuenta_principal(cuenta_id: int, request: ActualizarPrincipalRequest):
-    # Obtener la cuenta contable
-    cuenta = session.query(CuentasContables).filter_by(id_cuenta_contable=cuenta_id).first()
+def actualizar_cuenta_principal(cuenta_id: int, request: ActualizarPrincipalRequest, db: Session = Depends(get_db)):
+    cuenta = db.query(CuentasContables).filter_by(id_cuenta_contable=cuenta_id).first()
     if not cuenta:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada.")
     
-    # Actualizar el estado de cuenta principal
     if request.es_principal:
-        # Marcar como cuenta principal si no lo es ya
         cuenta_principal = CuentasPrincipales(
             codigo=cuenta.codigo,
             nombre_cuenta=cuenta.nombre_cuenta,
@@ -327,21 +330,19 @@ def actualizar_cuenta_principal(cuenta_id: int, request: ActualizarPrincipalRequ
             tipo_cuenta=cuenta.tipo_cuenta,
             id_cuenta_contable=cuenta.id_cuenta_contable
         )
-        session.add(cuenta_principal)
+        db.add(cuenta_principal)
     else:
-        # Desmarcar como cuenta principal
-        session.query(CuentasPrincipales).filter_by(id_cuenta_contable=cuenta_id).delete()
+        db.query(CuentasPrincipales).filter_by(id_cuenta_contable=cuenta_id).delete()
 
-    session.commit()
+    db.commit()
 
     return {"mensaje": "Actualización exitosa"}
 
 @app.get("/empresas/{empresa_id}/planes/{plan_id}/cuentas")
-def obtener_cuentas_del_plan(empresa_id: int, plan_id: int):
+def obtener_cuentas_del_plan(empresa_id: int, plan_id: int, db: Session = Depends(get_db)):
     print(f"Recibido empresa_id: {empresa_id}, plan_id: {plan_id}")
     
-    # Verificar que el plan de cuentas pertenece a la empresa especificada
-    plan_cuentas = session.query(PlanCuentas).filter_by(id_plan_cuentas=plan_id, id_empresas=empresa_id).first()
+    plan_cuentas = db.query(PlanCuentas).filter_by(id_plan_cuentas=plan_id, id_empresas=empresa_id).first()
     
     if not plan_cuentas:
         print(f"No se encontró un plan de cuentas para empresa_id={empresa_id}, plan_id={plan_id}")
@@ -349,11 +350,11 @@ def obtener_cuentas_del_plan(empresa_id: int, plan_id: int):
     
     print(f"Plan de cuentas encontrado: {plan_cuentas.descripcion_cuenta}")
     
-    cuentas = session.query(CuentasContables).filter_by(id_plan_cuenta=plan_id).all()
+    cuentas = db.query(CuentasContables).filter_by(id_plan_cuenta=plan_id).all()
 
     resultado = []
     for cuenta in cuentas:
-        es_principal = session.query(CuentasPrincipales).filter_by(id_cuenta_contable=cuenta.id_cuenta_contable).first() is not None
+        es_principal = db.query(CuentasPrincipales).filter_by(id_cuenta_contable=cuenta.id_cuenta_contable).first() is not None
         resultado.append({
             "id_cuenta_contable": cuenta.id_cuenta_contable,
             "codigo": cuenta.codigo,
@@ -366,46 +367,39 @@ def obtener_cuentas_del_plan(empresa_id: int, plan_id: int):
     return resultado
 
 @app.post("/empresas/{empresa_id}/planes/{plan_id}/cuentas")
-def agregar_cuenta(empresa_id: int, plan_id: int, cuenta: CuentaNueva):
-    # Verificar que el plan de cuentas pertenece a la empresa especificada
-    plan_cuentas = session.query(PlanCuentas).filter_by(id_plan_cuentas=plan_id, id_empresas=empresa_id).first()
+def agregar_cuenta(empresa_id: int, plan_id: int, cuenta: CuentaNueva, db: Session = Depends(get_db)):
+    plan_cuentas = db.query(PlanCuentas).filter_by(id_plan_cuentas=plan_id, id_empresas=empresa_id).first()
     
     if not plan_cuentas:
         raise HTTPException(status_code=404, detail="El plan de cuentas no fue encontrado para esta empresa.")
     
-    # Verificar si el código de cuenta ya existe en el plan
-    existe_cuenta = session.query(CuentasContables).filter_by(id_plan_cuenta=plan_id, codigo=cuenta.codigo).first()
+    existe_cuenta = db.query(CuentasContables).filter_by(id_plan_cuenta=plan_id, codigo=cuenta.codigo).first()
     if existe_cuenta:
         raise HTTPException(status_code=400, detail="El código de cuenta ya existe en este plan de cuentas.")
     
-    # Determinar nivel y tipo de cuenta
-    nivel_cuenta = cuenta.codigo.count('.') + 1  # Por ejemplo, '1.1.2' tiene nivel 3
-    tipo_cuenta = determinar_nivel_tipo(cuenta.codigo)  # Usa la función para determinar el tipo de cuenta
+    nivel_cuenta = cuenta.codigo.count('.') + 1
+    tipo_cuenta = determinar_nivel_tipo(cuenta.codigo)
     
-    # Crear la nueva cuenta
     nueva_cuenta = CuentasContables(
         codigo=cuenta.codigo,
         nombre_cuenta=cuenta.descripcion,
         nivel_cuenta=nivel_cuenta,
         tipo_cuenta=tipo_cuenta,
         saldo_normal=cuenta.saldo,
-        estado_cuenta="Activo",  # Ajustar según tu lógica de negocio
+        estado_cuenta="Activo",
         id_plan_cuenta=plan_id
     )
-    session.add(nueva_cuenta)
-    session.commit()
+    db.add(nueva_cuenta)
+    db.commit()
     
     return {"mensaje": "Cuenta agregada con éxito."}
 
-
 @app.post("/empresas/crear")
-def crear_empresa(empresa: EmpresaCreateRequest):
-    # Verificar si el RIF ya existe en la base de datos
-    existe_empresa = session.query(Empresas).filter_by(rif=empresa.rif).first()
+def crear_empresa(empresa: EmpresaCreateRequest, db: Session = Depends(get_db)):
+    existe_empresa = db.query(Empresas).filter_by(rif=empresa.rif).first()
     if existe_empresa:
         raise HTTPException(status_code=400, detail="Ya existe una empresa con este RIF.")
 
-    # Crear la nueva empresa
     nueva_empresa = Empresas(
         nombre=empresa.nombre,
         fecha_constitucion=empresa.fecha_constitucion,
@@ -415,96 +409,177 @@ def crear_empresa(empresa: EmpresaCreateRequest):
         direccion=empresa.direccion,
         correo=empresa.correo
     )
-    session.add(nueva_empresa)
-    session.commit()
-    session.refresh(nueva_empresa)  # Obtener el ID de la empresa recién creada
+    db.add(nueva_empresa)
+    db.commit()
+    db.refresh(nueva_empresa)
 
-    # Crear los departamentos asociados
     for depto in empresa.departamentos:
         nuevo_departamento = Departamentos(
             nombre_departamento=depto.nombre_departamento,
             id_empresa=nueva_empresa.id_empresas
         )
-        session.add(nuevo_departamento)
+        db.add(nuevo_departamento)
 
-    session.commit()
+    db.commit()
 
     return {"mensaje": "Empresa y departamentos creados con éxito.", "empresa_id": nueva_empresa.id_empresas}
 
-@app.post("/asientos/{asiento_id}/cerrar")
-def cerrar_asiento_contable(asiento_id: int):
-    asiento = session.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
+@app.get("/tipo_comprobante")
+def get_tipos_comprobante(db: Session = Depends(get_db)):
+    return db.query(TipoComprobante).all()
 
-    # Aquí puedes incluir la lógica para validar si el asiento cuadra
-    if asiento.debe != asiento.haber:
-        raise HTTPException(status_code=400, detail="El asiento contable no cuadra entre el debe y el haber.")
+@app.get("/asientos")
+def get_asientos(db: Session = Depends(get_db)):
+    try:
+        print("Obteniendo asientos contables...")
+        asientos = db.query(AsientosContables).all()
+        print(f"Se encontraron {len(asientos)} asientos contables.")
+        return asientos
+    except Exception as e:
+        print(f"Error al obtener los asientos: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-    # Actualizar estado de cierre contable
-    cierre_contable = CierreContable(
-        estado="Cerrado",
-        id_plan_cuentas=asiento.id_plan_cuentas,
-        fecha_contable_apertura=asiento.fecha,
-        fecha_contable_cierre=datetime.date.today()
-    )
-    session.add(cierre_contable)
-    session.commit()
+@app.post("/asientos")
+def create_asiento(
+    num_asiento: int = Form(...),
+    tipo_comprobante: int = Form(...),
+    fecha: str = Form(...),
+    documento_respaldo: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        cierre_abierto = db.query(CierreContable).filter_by(estado='Abierto').first()
 
-    return {"mensaje": "Asiento contable cerrado con éxito."}
+        if not cierre_abierto:
+            cierre_abierto = CierreContable(
+                estado='Abierto',
+                fecha_contable_apertura=date.today(),
+                fecha_contable_cierre='0000-00-00'
+            )
+            db.add(cierre_abierto)
+            db.commit()
+            db.refresh(cierre_abierto)
 
+        ruta_archivo = f"uploads/{documento_respaldo.filename}"
+        with open(ruta_archivo, "wb") as buffer:
+            buffer.write(documento_respaldo.file.read())
+
+        nuevo_asiento = AsientosContables(
+            num_asiento=num_asiento,
+            tipo_comprobante=tipo_comprobante,
+            fecha=fecha,
+            documento_respaldo=ruta_archivo,
+            cierre_contable=cierre_abierto.id_cierre_contable
+        )
+        db.add(nuevo_asiento)
+        db.commit()
+        db.refresh(nuevo_asiento)
+
+        return nuevo_asiento
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/asientos/{asiento_id}")
+def get_asiento(asiento_id: int, db: Session = Depends(get_db)):
+    asiento = db.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
+
+    if not asiento:
+        raise HTTPException(status_code=404, detail="Asiento no encontrado")
+
+    print(f"Asiento encontrado: {asiento}")  # Verifica que el asiento se cargue
+
+    # Intentamos acceder al comprobante
+    comprobante = asiento.comprobante
+    if comprobante:
+        print(f"Comprobante encontrado: {comprobante}")
+        if comprobante.tipo:
+            print(f"Tipo de comprobante encontrado: {comprobante.tipo.nombre_comprobante}")
+        else:
+            print("El tipo de comprobante no se encontró.")
+    else:
+        raise HTTPException(status_code=404, detail="El comprobante no fue encontrado para este asiento")
+    
+    cuentas_asiento = db.query(CuentasContablesAsientosContables).filter_by(id_asiento_contable=asiento_id).all()
+    cuentas = [
+        {
+            "nombre_cuenta": cuenta.cuenta_contable.nombre_cuenta,
+            "debe_haber": cuenta.debe_haber,
+            "monto": cuenta.monto
+        }
+        for cuenta in cuentas_asiento
+    ]
+    
+    return {
+        "num_asiento": asiento.num_asiento,
+        "tipo_comprobante": comprobante.tipo.nombre_comprobante if comprobante and comprobante.tipo else "Desconocido",
+        "fecha": asiento.fecha,
+        "cuentas": cuentas
+    }
+
+@app.put("/asientos/{asiento_id}")
+def modificar_asiento(asiento_id: int, nuevo_num_asiento: int, nuevo_tipo_comprobante: int, db: Session = Depends(get_db)):
+    asiento = db.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
+    
+    if not asiento:
+        raise HTTPException(status_code=404, detail="Asiento no encontrado")
+    
+    cierre = db.query(CierreContable).filter_by(id_cierre_contable=asiento.cierre_contable).first()
+    
+    if cierre.estado != 'Abierto':
+        raise HTTPException(status_code=400, detail="No se puede modificar un asiento contable en un cierre cerrado.")
+    
+    asiento.num_asiento = nuevo_num_asiento
+    asiento.tipo_comprobante = nuevo_tipo_comprobante
+    db.commit()
+    
+    return {"mensaje": "Asiento contable modificado con éxito."}
+
+@app.post("/cierre-contable/{cierre_id}/cerrar")
+def cerrar_cierre_contable(cierre_id: int, db: Session = Depends(get_db)):
+    cierre = db.query(CierreContable).filter_by(id_cierre_contable=cierre_id).first()
+    
+    if not cierre:
+        raise HTTPException(status_code=404, detail="Cierre contable no encontrado")
+    
+    if cierre.estado == 'Cerrado':
+        raise HTTPException(status_code=400, detail="El cierre contable ya está cerrado.")
+    
+    cierre.estado = 'Cerrado'
+    cierre.fecha_contable_cierre = date.today()
+    db.commit()
+    
+    return {"mensaje": "Cierre contable cerrado con éxito."}
 
 @app.post("/asientos/{asiento_id}/cuentas")
-def agregar_cuentas_asiento(asiento_id: int, cuenta_data: dict):
-    cuenta_id = cuenta_data["cuentaId"]
-    checked = cuenta_data["checked"]
+def add_cuenta_to_asiento(asiento_id: int, cuentaId: int, debe_haber: str, monto: float, db: Session = Depends(get_db)):
+    asiento = db.query(AsientosContables).filter(AsientosContables.id_asiento_contable == asiento_id).first()
+    if not asiento:
+        raise HTTPException(status_code=404, detail="Asiento no encontrado")
 
-    if checked:
-        # Agregar cuenta al asiento
-        asiento_cuenta = session.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
-        asiento_cuenta.id_cuenta_contable = cuenta_id
-        session.commit()
-    else:
-        # Eliminar cuenta del asiento
-        asiento_cuenta = session.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
-        asiento_cuenta.id_cuenta_contable = None
-        session.commit()
-
-    cuentas = session.query(CuentasContables).filter_by(id_cuenta_contable=cuenta_id).all()
-    return [{"codigo": c.codigo, "nombre_cuenta": c.nombre_cuenta, "debe": 0, "haber": 0} for c in cuentas]
-
-
-@app.post("/empresas/{empresa_id}/asientos")
-def crear_asiento_contable(empresa_id: int, plan_id: int):
-    nuevo_asiento = AsientosContables(
-        id_cuenta_contable=None,  # Inicialmente sin cuenta
-        id_plan_cuentas=plan_id,
-        num_asiento=1,  # Debería generarse un número único para cada asiento
-        documento_respaldo='Sin documento',  # Cambiar según los datos de entrada
-        fecha=datetime.date.today(),
-        id_cuentas_principales=None  # Inicialmente sin cuenta principal
+    cuenta_asiento = CuentasContablesAsientosContables(
+        id_asiento_contable=asiento_id,
+        id_cuenta_contable=cuentaId,
+        debe_haber=debe_haber,
+        monto=monto
     )
-    session.add(nuevo_asiento)
-    session.commit()
+    db.add(cuenta_asiento)
+    db.commit()
+    db.refresh(asiento)
 
-    return {"asiento_id": nuevo_asiento.id_asiento_contable}
+    return asiento
 
-# Crear un tipo de comprobante
 @app.post("/tipo_comprobante/crear")
-def crear_tipo_comprobante(request: TipoComprobanteCreateRequest):
+def crear_tipo_comprobante(request: TipoComprobanteCreateRequest, db: Session = Depends(get_db)):
     nuevo_tipo = TipoComprobante(nombre_comprobante=request.nombre_comprobante)
-    session.add(nuevo_tipo)
-    session.commit()
-    session.refresh(nuevo_tipo)
+    db.add(nuevo_tipo)
+    db.commit()
+    db.refresh(nuevo_tipo)
     return {"mensaje": "Tipo de comprobante creado con éxito"}
 
-# Obtener los tipos de comprobante
-@app.get("/tipo_comprobante")
-def obtener_tipos_comprobante():
-    tipos = session.query(TipoComprobante).all()
-    return tipos
-
-# Crear un comprobante
 @app.post("/comprobantes/crear")
-def crear_comprobante(titulo: str, descripcion: str, fecha: str, tipo_comprobante: int, archivo: UploadFile = File(...)):
+def crear_comprobante(titulo: str, descripcion: str, fecha: str, tipo_comprobante: int, archivo: UploadFile = File(...), db: Session = Depends(get_db)):
     ruta_archivo = f"uploads/{archivo.filename}"
     with open(ruta_archivo, "wb") as buffer:
         buffer.write(archivo.file.read())
@@ -516,115 +591,7 @@ def crear_comprobante(titulo: str, descripcion: str, fecha: str, tipo_comprobant
         archivo=ruta_archivo,
         tipo_comprobante=tipo_comprobante
     )
-    session.add(nuevo_comprobante)
-    session.commit()
-    session.refresh(nuevo_comprobante)
+    db.add(nuevo_comprobante)
+    db.commit()
+    db.refresh(nuevo_comprobante)
     return {"mensaje": "Comprobante creado con éxito"}
-
-"""@app.post("/registro")
-async def registro(archivo : registro):
-
-
-    # Aca ira toda la parte donde recopila la informacion
-    correox = archivo.correo
-    tokenx = archivo.recuperacion
-    tokens = archivo.dict()
-    del tokens['nombre']
-    del tokens['correo']
-    del tokens['clave']
-    del tokens['roles_idroles']
-    del tokens['token_idtoken']
-
-
-    correo_reg = session.query(usuarios).where(usuarios.correo == correox).first()
-    if(correo_reg == None):
-        # Generar un correo cada vez que haga un registro
-        token_instance = token(**tokens)
-
-        # Add the token instance to the session
-        session.add(token_instance)
-        session.commit()
-
-        token_bus = session.query(token).where(token.recuperacion == tokenx).first()
-
-        nuevo_usuario = archivo.dict()
-        del nuevo_usuario['recuperacion']
-
-
-        nuevo_usuario['token_idtoken'] = token_bus.id_token
-
-        usuario_instancia = usuarios(**nuevo_usuario)
-        session.add(usuario_instancia)
-        session.commit()
-
-
-
-        load_dotenv()
-        password = os.getenv("PASSWORD")
-        email_sender = "juanmalave.itjo@gmail.com"  # el que envia el correo
-
-        email_reciver = correox #el que recibe el correo
-
-        subject = "Registro de su cuenta"
-        screenshot = pyautogui.screenshot()
-        screenshot.save("../src/imagenes/captura_de_pantalla.png")
-        screenshot.show()
-        body = f"We received a request to recover your account. \n"
-        body += f"Toma tu token de recuperacion:"
-        body += f"{token_bus.recuperacion} \n"  # Replace with actual password reset link generation
-        body += f"\nIf you didn't request a password reset, you can safely ignore this email."
-
-        em = EmailMessage()
-        em["From"] = email_sender
-        em["To"] = email_reciver
-        em["Subject"] = subject
-        em.set_content(body)
-
-        contexto = ssl.create_default_context()
-
-        with smtplib.SMTP_SSL("smtp.gmail.com",465,context=contexto) as smtp:
-              smtp.login(email_sender,password)
-              smtp.sendmail(email_sender,email_reciver,em.as_string())
-
-        return {"Registro Completo"}
-
-    else:
-        return {"falso": False}
-"""
-
-"""@app.post("/recuperacion")
-async def recuperacion(archivo:recuperar):
-
-
-    correo_ver = archivo.correo
-    correo_final = session.query(usuarios).where(usuarios.correo == correo_ver).first()
-
-    if(correo_final == None):
-
-        return {"False": False}
-    else:
-        load_dotenv()
-        password = os.getenv("PASSWORD")
-        email_sender = "juanmalave.itjo@gmail.com"  # el que envia el correo
-
-        email_reciver = correo_ver  # el que recibe el correo
-
-        subject = "Registro de su cuenta"
-
-        body = f"We received a request to recover your account. \n"
-        body += f"Esta es tu clave:"
-        body += f"{correo_final.clave} \n"  # Replace with actual password reset link generation
-        body += f"\nIf you didn't request a password reset, you can safely ignore this email."
-
-        em = EmailMessage()
-        em["From"] = email_sender
-        em["To"] = email_reciver
-        em["Subject"] = subject
-        em.set_content(body)
-
-        contexto = ssl.create_default_context()
-
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=contexto) as smtp:
-            smtp.login(email_sender, password)
-            smtp.sendmail(email_sender, email_reciver, em.as_string())
-        return {"data": correo_final}"""

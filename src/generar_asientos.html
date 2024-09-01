@@ -2,27 +2,71 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Asientos Contables</title>
+    <title>Generar Asientos Contables</title>
     <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/generar_asientos.js"></script>
 </head>
 <body>
-    <h1>Gestión de Asientos Contables</h1>
 
-    <div id="asientos-container">
-        <button id="crear-asiento-btn">Crear Nuevo Asiento Contable</button>
-        <div id="asiento-activo" style="display: none;">
-            <h2>Asiento Contable Actual</h2>
-            <div id="cuentas-seleccionadas"></div>
-            <button id="cerrar-asiento-btn">Cerrar Asiento Contable</button>
-        </div>
+    <h1>Generar Asientos Contables</h1>
+
+    <!-- Formulario para crear un nuevo asiento contable -->
+    <div>
+        <h2>Crear Nuevo Asiento Contable</h2>
+        <label for="num_asiento">Número de Asiento:</label>
+        <input type="number" id="num_asiento" name="num_asiento" min="1" required>
+
+        <label for="tipo_comprobante">Tipo de Comprobante:</label>
+        <select id="tipo_comprobante">
+            <!-- Los tipos de comprobantes serán llenados por JavaScript -->
+        </select><br>
+
+        <label for="fecha_asiento">Fecha del Asiento:</label>
+        <input type="date" id="fecha_asiento" name="fecha" max="{{current_date}}" required>
+
+        <label for="documento_respaldo">Documento Respaldo:</label>
+        <input type="file" id="documento_respaldo" required><br>
+
+        <button type="button" id="crear_asiento_btn">Crear Asiento</button>
     </div>
 
-    <div id="listado-cuentas">
-        <h2>Listado de Cuentas Disponibles</h2>
-        <div id="cuentas-disponibles"></div>
+    <!-- Listado de asientos contables existentes -->
+    <div>
+        <h2>Asientos Contables Existentes</h2>
+        <ul id="lista_asientos_contables">
+            <!-- Los asientos contables serán llenados por JavaScript -->
+        </ul>
     </div>
 
-    <script src="js/gestionar_asientos.js"></script>
+    <!-- Detalles del asiento seleccionado -->
+    <div id="detalle_asiento" style="display:none;">
+        <h2>Detalle del Asiento Contable</h2>
+        <p id="detalle_num_asiento"></p>
+        <p id="detalle_tipo_comprobante"></p>
+        <p id="detalle_fecha_asiento"></p>
+
+        <h3>Cuentas Asociadas</h3>
+        <ul id="lista_cuentas">
+            <!-- Las cuentas asociadas se mostrarán aquí -->
+        </ul>
+
+        <h3>Agregar Cuentas al Asiento</h3>
+        <label for="cuenta_contable">Cuenta Contable:</label>
+        <select id="cuenta_contable">
+            <!-- Las cuentas contables serán llenadas por JavaScript -->
+        </select><br>
+
+        <label for="debe_haber">Debe / Haber:</label>
+        <select id="debe_haber">
+            <option value="debe">Debe</option>
+            <option value="haber">Haber</option>
+        </select><br>
+
+        <label for="monto">Monto:</label>
+        <input type="number" id="monto" required><br>
+
+        <button type="button" id="agregar_cuenta_btn">Agregar Cuenta</button>
+    </div>
+
 </body>
 </html>

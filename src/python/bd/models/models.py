@@ -1,14 +1,7 @@
-from ..base import engine,Base
+from ..base import engine, Base  # Importa Base desde base.py
 import datetime
-from sqlalchemy import (Double, Table, Column, Integer, String, Text,Float, CHAR, Boolean, Date, Time, TIMESTAMP, ForeignKey,Uuid, BigInteger )
-from sqlalchemy.dialects.postgresql import BIT
-from sqlalchemy.orm import relationship, declarative_base
-
-from sqlalchemy import Column, Integer, String, Text, Date, ForeignKey, Float, VARCHAR
+from sqlalchemy import (Double, Table, Column, Integer, String, Text, Float, CHAR, Boolean, Date, Time, TIMESTAMP, ForeignKey, Uuid, BigInteger,VARCHAR)
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
 
 class AsientosContables(Base):
     __tablename__ = 'asientos_contables'
