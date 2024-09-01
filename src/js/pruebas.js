@@ -20,8 +20,11 @@ $(function () {
         const empresaId = $(this).data('id');
         const empresaNombre = $(this).data('nombre');
         console.log("ID de la empresa seleccionada:", empresaId);
+        
+        // Guarda la empresa seleccionada en localStorage
         localStorage.setItem('empresaSeleccionada', JSON.stringify({ id: empresaId, nombre: empresaNombre }));
-
+        
+        // Llama a la función para obtener los planes de cuentas
         obtenerPlanesCuentas(empresaId);
     });
 
@@ -29,7 +32,7 @@ $(function () {
         // Limpiar el contenedor de planes de cuentas y el botón de generar asientos contables
         $("#planes-de-cuentas").empty();
         $("#asientos-contables-container").empty();
-
+    
         $.ajax({
             url: `http://localhost:9000/empresas/${empresaId}/planes`,
             method: 'GET',
@@ -85,10 +88,14 @@ $(function () {
         planesDiv.on('click', '.modificar-plan-btn', function () {
             const planId = $(this).data('id');
             const empresaId = $(this).data('empresa-id');
+            
+            // Guarda el plan y empresa seleccionada en localStorage
             localStorage.setItem('planIdSeleccionado', planId);
             localStorage.setItem('empresaIdSeleccionada', empresaId);
-            console.log(localStorage.getItem('planIdSeleccionado'));
-            console.log(localStorage.getItem('empresaIdSeleccionada'));  // Guarda el planId en localStorage
+        
+            console.log("PlanId guardado:", localStorage.getItem('planIdSeleccionado'));
+            console.log("EmpresaId guardado:", localStorage.getItem('empresaIdSeleccionada'));
+        
             window.location.href = `modificar_plan.html`;
         });
     }

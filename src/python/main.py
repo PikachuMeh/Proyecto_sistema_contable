@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from typing import Union, List
 from pydantic import BaseModel,Field
-from fastapi import FastAPI,HTTPException,Depends,File,UploadFile
+from fastapi import FastAPI,HTTPException,Depends,File,UploadFile,Form
 from fastapi.middleware.cors import CORSMiddleware
 from bd.base import Base,session
 import tempfile
@@ -153,7 +153,8 @@ class CuentaNueva(BaseModel):
     descripcion: str
     saldo: float
 
-class DepartamentoCreateRequest(BaseModel):
+class DepartamentoResponse(BaseModel):
+    id_departamento: int
     nombre_departamento: str
 
 class EmpresaCreateRequest(BaseModel):
@@ -164,7 +165,7 @@ class EmpresaCreateRequest(BaseModel):
     actividad_economica: str
     direccion: str
     correo: str
-    departamentos: List[DepartamentoCreateRequest] = []
+    departamentos: List[DepartamentoResponse] = []
 
 @app.get("/")
 async def index():
@@ -183,6 +184,12 @@ def obtener_planes(empresa_id: int):
     plan_cuentas = session.query(PlanCuentas).filter(PlanCuentas.id_empresas == empresa_id).all()
     return plan_cuentas
 
+@app.get("/empresas/{empresa_id}/departamentos", response_model=List[DepartamentoResponse])
+def obtener_departamentos_por_empresa(empresa_id: int):
+    departamentos = session.query(Departamentos).filter(Departamentos.id_empresa == empresa_id).all()
+    if not departamentos:
+        raise HTTPException(status_code=404, detail="No se encontraron departamentos para esta empresa.")
+    return departamentos
 
 @app.post("/login/")
 async def otro(objeto: Item):
@@ -197,27 +204,24 @@ async def otro(objeto: Item):
         return {"correo": correox}
 
 @app.post("/empresas/{empresa_id}/crear-plan")
-async def crear_plan(empresa_id: int, archivo: UploadFile = File(...)):
+async def crear_plan(empresa_id: int, departamento_id: int = Form(...), archivo: UploadFile = File(...)):
     if not archivo.filename.endswith('.xlsx'):
         raise HTTPException(status_code=400, detail="El archivo debe ser un archivo Excel con extensión .xlsx")
 
     try:
-        # Crear un archivo permanente en el sistema de archivos
-        carpeta = "uploads"  # Cambia esta ruta al directorio deseado
+        # Guardar el archivo subido en el sistema de archivos
+        carpeta = "uploads"
         if not os.path.exists(carpeta):
             os.makedirs(carpeta)
 
         ruta_archivo = os.path.join(carpeta, archivo.filename)
-        
-        # Guardar el archivo
         with open(ruta_archivo, "wb") as buffer:
             buffer.write(await archivo.read())
 
-        # Cargar el archivo Excel con openpyxl
+        # Procesar el archivo Excel
         workbook = openpyxl.load_workbook(ruta_archivo)
         hoja = workbook.active
 
-        # Leer las celdas (ajusta el rango según tus datos)
         celdas = hoja['A1':'C325']
         resultados = []
         codigos = []
@@ -259,25 +263,19 @@ async def crear_plan(empresa_id: int, archivo: UploadFile = File(...)):
         session.add(nuevo_plan)
         session.commit()
         session.refresh(nuevo_plan)
-        
-        # Verificar si el departamento existe
-        departamento = session.query(Departamentos).filter_by(id_empresa=empresa_id).first()
-        if not departamento:
-            raise HTTPException(status_code=404, detail="El departamento especificado no existe.")
 
-        # Crear un nuevo registro de movimiento en registros_movimientos
+        # Crear un nuevo registro de movimiento
         nuevo_movimiento = RegistrosMovimientos(
             fecha_movimiento=date.today(),
             id_empresas=empresa_id,
             nro_control=generar_codigo_aleatorio(),
             nro_documentos=ruta_archivo,
-            id_departamentos=departamento.id_departamento  # Asegurando que el departamento no sea None
+            id_departamentos=departamento_id  # Asociar el departamento
         )
         session.add(nuevo_movimiento)
         session.commit()
         session.refresh(nuevo_movimiento)
 
-        # Crear un nuevo movimiento en movimientos_plan relacionado con el registro de movimiento creado y el plan de cuentas creado
         nuevo_movimiento_plan = MovimientosPlan(
             id_plan_cuentas=nuevo_plan.id_plan_cuentas,
             id_registro=nuevo_movimiento.id_registros_movimientos
@@ -286,7 +284,7 @@ async def crear_plan(empresa_id: int, archivo: UploadFile = File(...)):
         session.commit()
         session.refresh(nuevo_movimiento_plan)
 
-        # Insertar cada cuenta en la tabla PlanCuentas
+        # Insertar cada cuenta contable en la base de datos
         for resultado in resultados:
             nueva_cuenta = CuentasContables(
                 codigo=resultado['codigo'],
@@ -593,6 +591,7 @@ async def registro(archivo : registro):
     else:
         return {"falso": False}
 """
+
 """@app.post("/recuperacion")
 async def recuperacion(archivo:recuperar):
 

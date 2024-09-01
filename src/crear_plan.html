@@ -18,10 +18,17 @@
         <input type="radio" name="plan-option" value="archivo"> Agregar Plan de Cuentas mediante archivo Excel
     </label>
 
+    <!-- Seleccionar el departamento -->
+    <div id="departamento-section">
+        <label for="departamento-select">Seleccionar Departamento:</label>
+        <select id="departamento-select">
+            <!-- Aquí se llenarán las opciones de los departamentos con JS -->
+        </select>
+    </div>
+
     <!-- Formulario para crear un plan de cuentas desde cero -->
-    
     <form id="crear-plan-form" >
-        <p>Desabilitado por ahora</p>
+        <p>Deshabilitado por ahora</p>
         <h2>Crear Plan de Cuentas</h2>
         <label for="codigo-cuenta">Código de Cuenta:</label>
         <input type="number" id="codigo-cuenta" required disabled><br>
@@ -62,6 +69,5 @@
         <button type="button" id="upload-plan-btn">Subir Plan de Cuentas</button>
     </form>
 
-    
 </body>
 </html>
