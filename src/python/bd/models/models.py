@@ -12,21 +12,20 @@ Base = declarative_base()
 
 class AsientosContables(Base):
     __tablename__ = 'asientos_contables'
-    
+
     id_asiento_contable = Column(Integer, primary_key=True, autoincrement=True)
-    id_cuenta_contable = Column(Integer, ForeignKey('cuentas_contables.id_cuenta_contable'), nullable=False)
     num_asiento = Column(Integer, nullable=False)
     documento_respaldo = Column(Integer, ForeignKey('comprobantes.id_comprobante'), nullable=False)  # Asume que es una clave foránea
     fecha = Column(Date, nullable=False)
     cierre_contable = Column(Integer, ForeignKey('cierre_contable.id_cierre_contable'), nullable=False)
     tipo_comprobante = Column(Integer, ForeignKey('tipo_comprobante.id_tipo_comprobante'), nullable=False)
-    id_cuentas_principales = Column(Integer, ForeignKey('cuentas_principales.id_cuentas_principales'), nullable=False)
+    id_cuentas_principales = Column(Integer, ForeignKey('cuentas_principales.id_cuentas_principales'), nullable=True)
 
     # Relación con la tabla comprobantes
     comprobante = relationship("Comprobantes", back_populates="asientos")
     reportes = relationship("Reportes", back_populates="asiento_contable")
     # Relación con otras tablas
-    cuenta_contable = relationship("CuentasContables", back_populates="asientos_contables")
+    cuentas_contables_asientos = relationship("CuentasContablesAsientosContables", back_populates="asiento_contable")
     cierre = relationship("CierreContable", back_populates="asientos_contables")
     cuenta_principal = relationship("CuentasPrincipales", back_populates="asientos_contables")
 
@@ -81,9 +80,18 @@ class CuentasContables(Base):
     id_plan_cuenta = Column(Integer, ForeignKey('plan_cuentas.id_plan_cuentas'), nullable=False)
 
     plan_cuentas = relationship("PlanCuentas", back_populates="cuentas_contables")
-    asientos_contables = relationship("AsientosContables", back_populates="cuenta_contable")
     cuentas_principales = relationship("CuentasPrincipales", back_populates="cuenta_contable")
+    asientos_contables_asientos = relationship("CuentasContablesAsientosContables", back_populates="cuenta_contable")
 
+class CuentasContablesAsientosContables(Base):
+    __tablename__ = 'cuentas_contables_asientos_contables'
+
+    id_asiento_contable = Column(Integer, ForeignKey('asientos_contables.id_asiento_contable'), primary_key=True)
+    id_cuenta_contable = Column(Integer, ForeignKey('cuentas_contables.id_cuenta_contable'), primary_key=True)
+
+    # Relaciones opcionales, dependiendo de cómo quieras navegar en los modelos
+    asiento_contable = relationship("AsientosContables", back_populates="cuentas_contables_asientos")
+    cuenta_contable = relationship("CuentasContables", back_populates="asientos_contables_asientos")
 
 class CuentasPrincipales(Base):
     __tablename__ = 'cuentas_principales'

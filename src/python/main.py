@@ -10,7 +10,7 @@ import string
 import json
 import re
 from datetime import date, datetime
-from bd.models.models import AsientosContables,Bitacora,CuentasContables,Empresas,Departamentos,PlanCuentas,RegistrosMovimientos,Reportes,Comprobantes,TipoComprobante,Usuarios,CierreContable,CuentasPrincipales,MovimientosPlan,MovimientosUsuarios
+from bd.models.models import AsientosContables,Bitacora,CuentasContables,CuentasContablesAsientosContables,Empresas,Departamentos,PlanCuentas,RegistrosMovimientos,Reportes,Comprobantes,TipoComprobante,Usuarios,CierreContable,CuentasPrincipales,MovimientosPlan,MovimientosUsuarios
 from email.message import EmailMessage
 import openpyxl
 import random
