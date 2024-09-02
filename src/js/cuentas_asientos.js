@@ -62,7 +62,22 @@ $(document).ready(function () {
             }
         });
     }
-
+    $('#cerrar_asiento_btn').click(function () {
+        $.ajax({
+            url: `http://localhost:9000/asientos/${asientoId}/cerrar`,
+            method: 'POST',
+            success: function (response) {
+                alert(response.mensaje);
+                // Desactivar los botones y formularios de edición
+                $('#agregar_cuenta_btn').prop('disabled', true);
+                $('#cerrar_asiento_btn').prop('disabled', true);
+            },
+            error: function (error) {
+                console.error('Error al cerrar el asiento:', error);
+                alert('Hubo un problema al cerrar el asiento: ' + error.responseJSON.detail);
+            }
+        });
+    });
     // Manejar la adición de cuentas al asiento
     $('#agregar_cuenta_btn').click(function () {
         const cuentaId = $('#cuenta_contable').val();

@@ -656,6 +656,36 @@ def verificar_numero_asiento(empresa_id: int, num_asiento: int, db: Session = De
     else:
         return {"exists": False}
 
+@app.post("/asientos/{asiento_id}/cerrar")
+def cerrar_asiento(asiento_id: int, db: Session = Depends(get_db)):
+    asiento = db.query(AsientosContables).filter(AsientosContables.id_asiento_contable == asiento_id).first()
+
+    if not asiento:
+        raise HTTPException(status_code=404, detail="Asiento no encontrado")
+
+    # Verificar si el asiento ya está asociado a un cierre contable cerrado
+    cierre = db.query(CierreContable).filter(CierreContable.id_cierre_contable == asiento.cierre_contable).first()
+    if cierre and cierre.estado == 'Cerrado':
+        raise HTTPException(status_code=400, detail="El asiento ya está cerrado.")
+
+    # Obtener todas las cuentas asociadas al asiento
+    cuentas_asiento = db.query(CuentasContablesAsientosContables).filter_by(id_asiento_contable=asiento_id).all()
+
+    # Calcular los totales de debe y haber
+    total_debe = sum(cuenta.saldo for cuenta in cuentas_asiento if cuenta.tipo_saldo == 'debe')
+    total_haber = sum(cuenta.saldo for cuenta in cuentas_asiento if cuenta.tipo_saldo == 'haber')
+
+    # Validar si el asiento cuadra
+    if total_debe != total_haber:
+        raise HTTPException(status_code=400, detail="El asiento no cuadra. El debe y el haber deben ser iguales antes de cerrar el asiento.")
+
+    # Marcar el cierre contable como cerrado
+    cierre.estado = 'Cerrado'
+    cierre.fecha_contable_cierre = date.today()
+    db.commit()
+
+    return {"mensaje": "Asiento cerrado correctamente"}
+
 @app.post("/comprobantes/crear")
 def crear_comprobante(asiento_id: int, archivo: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
