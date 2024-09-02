@@ -23,7 +23,7 @@ class AsientosContables(Base):
     cuentas_principales = relationship("CuentasPrincipales", back_populates="asientos_contables")
     cuentas = relationship("CuentasContablesAsientosContables", back_populates="asiento_contable")
     reportes = relationship("Reportes", back_populates="asiento_contable")  # Agrega esta relación
-
+    cuentas_contables_asientos = relationship("CuentasContablesAsientosContables", back_populates="asiento_contable")
 
 class Bitacora(Base):
     __tablename__ = 'bitacora'
@@ -74,19 +74,19 @@ class CuentasContables(Base):
 
     plan_cuentas = relationship("PlanCuentas", back_populates="cuentas_contables")
     cuentas_principales = relationship("CuentasPrincipales", back_populates="cuenta_contable")
-    asientos_contables_asientos = relationship("CuentasContablesAsientosContables", back_populates="cuenta_contable")
-
+    cuentas_asientos = relationship("CuentasContablesAsientosContables", back_populates="cuenta_contable")
 
 class CuentasContablesAsientosContables(Base):
-    __tablename__ = 'cuentas_contables_asientos_contables'
+    __tablename__ = "cuentas_contables_asientos_contables"
 
-    id_asiento_contable = Column(Integer, ForeignKey('asientos_contables.id_asiento_contable'), primary_key=True)
-    id_cuenta_contable = Column(Integer, ForeignKey('cuentas_contables.id_cuenta_contable'), primary_key=True)
-    tipo_saldo = Column(String(10), nullable=False)
-    saldo = Column(Float, nullable=False)
+    id_cuenta_asiento = Column(Integer, primary_key=True, index=True)
+    id_asiento_contable = Column(Integer, ForeignKey("asientos_contables.id_asiento_contable"))
+    id_cuenta_contable = Column(Integer, ForeignKey("cuentas_contables.id_cuenta_contable"))
+    tipo_saldo = Column(String)  # "debe" o "haber"
+    saldo = Column(Float)
 
-    asiento_contable = relationship("AsientosContables", back_populates="cuentas")
-    cuenta_contable = relationship("CuentasContables", back_populates="asientos_contables_asientos")
+    asiento_contable = relationship("AsientosContables", back_populates="cuentas_contables_asientos")
+    cuenta_contable = relationship("CuentasContables", back_populates="cuentas_asientos")
 
 class CuentasPrincipales(Base):
     __tablename__ = 'cuentas_principales'

@@ -37,7 +37,11 @@ $(document).ready(function () {
             },
             error: function (error) {
                 console.error('Error al generar el reporte:', error);
-                alert('Hubo un problema al generar el reporte.');
+                if (error.responseJSON && error.responseJSON.detail) {
+                    alert(`Error: ${error.responseJSON.detail}`);
+                } else {
+                    alert('Hubo un problema al generar el reporte.');
+                }
             }
         });
     });
@@ -49,17 +53,33 @@ $(document).ready(function () {
         if (reporte.length === 0) {
             $('#resultado_reporte').append('<p>No se encontraron asientos cerrados para este período.</p>');
         } else {
-            let reporteHTML = '<h3>Reporte Generado</h3><ul>';
-            reporte.forEach(item => {
-                reporteHTML += `<li>${item.descripcion_cuenta}: Debe ${item.debe}, Haber ${item.haber}</li>`;
+            let reporteHTML = '<h3>Reporte Generado</h3>';
+
+            reporte.forEach(asiento => {
+                reporteHTML += `<h4>Asiento ${asiento.num_asiento}</h4>`;
+                reporteHTML += `<p>Apertura: ${asiento.fecha_apertura}</p>`;
+                reporteHTML += `<p>Cierre: ${asiento.fecha_cierre}</p>`;
+                reporteHTML += '<ul>';
+                let totalDebe = 0;
+                let totalHaber = 0;
+                
+                asiento.cuentas.forEach(cuenta => {
+                    reporteHTML += `<li>${cuenta.descripcion_cuenta}: Debe ${cuenta.debe}, Haber ${cuenta.haber}</li>`;
+                    totalDebe += cuenta.debe;
+                    totalHaber += cuenta.haber;
+                });
+
+                reporteHTML += '</ul>';
+                reporteHTML += `<p><strong>Total Debe:</strong> ${totalDebe}</p>`;
+                reporteHTML += `<p><strong>Total Haber:</strong> ${totalHaber}</p>`;
             });
-            reporteHTML += '</ul>';
+
             $('#resultado_reporte').append(reporteHTML);
         }
     }
 
     // Botón para volver al menú principal
     $('#volver_btn').click(function () {
-        window.location.href = 'index.html';
+        window.location.href = 'menu.html';
     });
 });

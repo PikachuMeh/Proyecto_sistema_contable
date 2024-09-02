@@ -61,6 +61,27 @@ def validar_secuencia(codigos):
 
     return True
 
+def procesar_reporte(asientos_cerrados):
+    reporte = []
+    for asiento in asientos_cerrados:
+        info_asiento = {
+            "num_asiento": asiento.num_asiento,
+            "fecha_apertura": asiento.cierre.fecha_contable_apertura,
+            "fecha_cierre": asiento.cierre.fecha_contable_cierre,
+            "cuentas": []
+        }
+
+        for cuenta_asiento in asiento.cuentas_contables_asientos:
+            info_asiento["cuentas"].append({
+                "descripcion_cuenta": cuenta_asiento.cuenta_contable.nombre_cuenta,
+                "debe": cuenta_asiento.saldo if cuenta_asiento.tipo_saldo == 'debe' else 0,
+                "haber": cuenta_asiento.saldo if cuenta_asiento.tipo_saldo == 'haber' else 0,
+            })
+
+        reporte.append(info_asiento)
+    return reporte
+
+
 
 class Item(BaseModel):
     correo: str
@@ -795,6 +816,7 @@ def generar_reporte(tipo_reporte: str, request: dict, db: Session = Depends(get_
     if not fecha_reporte:
         raise HTTPException(status_code=400, detail="Fecha no proporcionada")
 
+    asientos_cerrados = []
     if tipo_reporte == 'diario':
         asientos_cerrados = db.query(AsientosContables).join(CierreContable).filter(
             CierreContable.estado == 'Cerrado',
@@ -805,10 +827,14 @@ def generar_reporte(tipo_reporte: str, request: dict, db: Session = Depends(get_
         mes_inicio = f"{fecha_reporte}-01"
         mes_fin = f"{fecha_reporte}-31"
 
-        asientos_cerrados = db.query(AsientosContables).join(CierreContable).filter(
-            CierreContable.estado == 'Cerrado',
+        asientos = db.query(AsientosContables).filter(
             AsientosContables.fecha.between(mes_inicio, mes_fin)
         ).all()
+
+        for asiento in asientos:
+            if asiento.cierre.estado != 'Cerrado':
+                raise HTTPException(status_code=400, detail=f"El asiento {asiento.num_asiento} no está cerrado.")
+            asientos_cerrados.append(asiento)
 
     else:
         raise HTTPException(status_code=400, detail="Tipo de reporte inválido")
@@ -816,5 +842,38 @@ def generar_reporte(tipo_reporte: str, request: dict, db: Session = Depends(get_
     if not asientos_cerrados:
         raise HTTPException(status_code=404, detail="No se encontraron asientos cerrados para el periodo seleccionado")
 
-    reporte = generar_reporte(asientos_cerrados)
+    reporte = procesar_reporte(asientos_cerrados)
+    return reporte
+
+
+@app.post("/reportes/diario")
+def generar_reporte_diario(fecha: str, db: Session = Depends(get_db)):
+    asientos_cerrados = db.query(AsientosContables).join(CierreContable).filter(
+        CierreContable.estado == 'Cerrado',
+        AsientosContables.fecha == fecha
+    ).all()
+
+    if not asientos_cerrados:
+        raise HTTPException(status_code=404, detail="No se encontraron asientos cerrados para esta fecha.")
+
+    reporte = procesar_reporte(asientos_cerrados)
+    return reporte
+
+@app.post("/reportes/mensual")
+def generar_reporte_mensual(mes: str, db: Session = Depends(get_db)):
+    mes_inicio = f"{mes}-01"
+    mes_fin = f"{mes}-31"
+
+    asientos = db.query(AsientosContables).filter(
+        AsientosContables.fecha.between(mes_inicio, mes_fin)
+    ).all()
+
+    # Verificar que todos los asientos del mes estén cerrados
+    for asiento in asientos:
+        cierre = db.query(CierreContable).filter(CierreContable.id_cierre_contable == asiento.cierre_contable).first()
+        if not cierre or cierre.estado != 'Cerrado':
+            raise HTTPException(status_code=400, detail="No se puede generar el reporte mensual porque uno o más asientos no están cerrados.")
+
+    # Si todos los asientos están cerrados, generar el reporte
+    reporte = procesar_reporte(asientos)
     return reporte
