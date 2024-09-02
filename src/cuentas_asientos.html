@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle de Asiento Contable</title>
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/cuentas_asientos.js"></script>
+</head>
+<body>
+
+    <h1>Detalle de Asiento Contable</h1>
+
+    <!-- Detalle del asiento contable -->
+    <div id="detalle_asiento">
+        <h2>Información del Asiento</h2>
+        <p id="detalle_num_asiento"></p>
+        <p id="detalle_tipo_comprobante"></p>
+        <p id="detalle_fecha_asiento"></p>
+
+        <h3>Cuentas Asociadas</h3>
+        <ul id="lista_cuentas">
+            <!-- Las cuentas asociadas se mostrarán aquí -->
+        </ul>
+    </div>
+
+    <!-- Formulario para agregar cuentas contables al asiento -->
+    <div id="agregar_cuenta">
+        <h3>Agregar Cuentas al Asiento</h3>
+        <label for="cuenta_contable">Cuenta Contable:</label>
+        <select id="cuenta_contable">
+            <!-- Las cuentas contables serán llenadas por JavaScript -->
+        </select><br>
+
+        <label for="debe_haber">Debe / Haber:</label>
+        <select id="debe_haber">
+            <option value="debe">Debe</option>
+            <option value="haber">Haber</option>
+        </select><br>
+
+        <label for="monto">Monto:</label>
+        <input type="number" id="monto" required><br>
+
+        <button type="button" id="agregar_cuenta_btn">Agregar Cuenta</button>
+    </div>
+
+    <!-- Botón para volver a la página de generación de asientos -->
+    <button id="volver_btn">Volver a Generar Asientos</button>
+
+</body>
+</html>

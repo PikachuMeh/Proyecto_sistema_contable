@@ -168,6 +168,13 @@ class EmpresaCreateRequest(BaseModel):
     correo: str
     departamentos: List[DepartamentoResponse] = []
 
+class CuentaAsientoRequest(BaseModel):
+    cuentaId: int
+    tipo_saldo: str
+    saldo: float
+
+
+
 # Dependencia para obtener la sesión de base de datos
 def get_db():
     db = SessionLocal()
@@ -445,9 +452,19 @@ def create_asiento(
     tipo_comprobante: int = Form(...),
     fecha: str = Form(...),
     documento_respaldo: UploadFile = File(...),
+    empresa_id: int = Form(...),
     db: Session = Depends(get_db)
 ):
     try:
+        # Verificar si el número de asiento ya existe para la misma empresa
+        existing_asiento = db.query(AsientosContables).filter(
+            AsientosContables.num_asiento == num_asiento,
+            AsientosContables.id_empresas == empresa_id
+        ).first()
+
+        if existing_asiento:
+            raise HTTPException(status_code=400, detail="El número de asiento ya existe para esta empresa.")
+
         cierre_abierto = db.query(CierreContable).filter_by(estado='Abierto').first()
 
         if not cierre_abierto:
@@ -464,22 +481,47 @@ def create_asiento(
         with open(ruta_archivo, "wb") as buffer:
             buffer.write(documento_respaldo.file.read())
 
+        # Crear el asiento contable
         nuevo_asiento = AsientosContables(
             num_asiento=num_asiento,
             tipo_comprobante=tipo_comprobante,
             fecha=fecha,
-            documento_respaldo=ruta_archivo,
-            cierre_contable=cierre_abierto.id_cierre_contable
+            documento_respaldo="",
+            cierre_contable=cierre_abierto.id_cierre_contable,
+            id_empresas=empresa_id
         )
         db.add(nuevo_asiento)
         db.commit()
         db.refresh(nuevo_asiento)
 
+        # Crear el comprobante asociado
+        nuevo_nombre_archivo = f"Comprobante_para_asiento_contable_{nuevo_asiento.num_asiento}.xlsx"
+        ruta_archivo_comprobante = f"uploads/{nuevo_nombre_archivo}"
+
+        nuevo_comprobante = Comprobantes(
+            titulo=f"Comprobante para el asiento contable {nuevo_asiento.num_asiento}",
+            descripcion="Descripción del comprobante generado automáticamente.",
+            fecha=date.today(),
+            archivo=ruta_archivo_comprobante,
+            tipo_comprobante=tipo_comprobante
+        )
+        db.add(nuevo_comprobante)
+        db.commit()
+        db.refresh(nuevo_comprobante)
+
+        # Asignar el comprobante al asiento contable
+        nuevo_asiento.documento_respaldo = nuevo_comprobante.id_comprobante
+        db.commit()
+
         return nuevo_asiento
 
+    except HTTPException as he:
+        db.rollback()
+        raise he
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    
     
 @app.get("/asientos/{asiento_id}")
 def get_asiento(asiento_id: int, db: Session = Depends(get_db)):
@@ -490,12 +532,16 @@ def get_asiento(asiento_id: int, db: Session = Depends(get_db)):
 
     print(f"Asiento encontrado: {asiento}")  # Verifica que el asiento se cargue
 
-    # Intentamos acceder al comprobante
-    comprobante = asiento.comprobante
+    # Obtener el comprobante a partir de la relación correcta en lugar de documento_respaldo
+    comprobante = db.query(Comprobantes).filter_by(id_comprobante=asiento.documento_respaldo).first()
     if comprobante:
         print(f"Comprobante encontrado: {comprobante}")
-        if comprobante.tipo:
-            print(f"Tipo de comprobante encontrado: {comprobante.tipo.nombre_comprobante}")
+        if comprobante.tipo_comprobante:
+            tipo_comprobante = db.query(TipoComprobante).filter_by(id_tipo_comprobante=comprobante.tipo_comprobante).first()
+            if tipo_comprobante:
+                print(f"Tipo de comprobante encontrado: {tipo_comprobante.nombre_comprobante}")
+            else:
+                print("El tipo de comprobante no se encontró.")
         else:
             print("El tipo de comprobante no se encontró.")
     else:
@@ -505,15 +551,15 @@ def get_asiento(asiento_id: int, db: Session = Depends(get_db)):
     cuentas = [
         {
             "nombre_cuenta": cuenta.cuenta_contable.nombre_cuenta,
-            "debe_haber": cuenta.debe_haber,
-            "monto": cuenta.monto
+            "tipo_saldo": cuenta.tipo_saldo,
+            "saldo": cuenta.saldo
         }
         for cuenta in cuentas_asiento
     ]
     
     return {
         "num_asiento": asiento.num_asiento,
-        "tipo_comprobante": comprobante.tipo.nombre_comprobante if comprobante and comprobante.tipo else "Desconocido",
+        "tipo_comprobante": tipo_comprobante.nombre_comprobante if comprobante and tipo_comprobante else "Desconocido",
         "fecha": asiento.fecha,
         "cuentas": cuentas
     }
@@ -553,22 +599,41 @@ def cerrar_cierre_contable(cierre_id: int, db: Session = Depends(get_db)):
     return {"mensaje": "Cierre contable cerrado con éxito."}
 
 @app.post("/asientos/{asiento_id}/cuentas")
-def add_cuenta_to_asiento(asiento_id: int, cuentaId: int, debe_haber: str, monto: float, db: Session = Depends(get_db)):
+def add_cuenta_to_asiento(asiento_id: int, cuenta: CuentaAsientoRequest, db: Session = Depends(get_db)):
     asiento = db.query(AsientosContables).filter(AsientosContables.id_asiento_contable == asiento_id).first()
     if not asiento:
         raise HTTPException(status_code=404, detail="Asiento no encontrado")
 
     cuenta_asiento = CuentasContablesAsientosContables(
         id_asiento_contable=asiento_id,
-        id_cuenta_contable=cuentaId,
-        debe_haber=debe_haber,
-        monto=monto
+        id_cuenta_contable=cuenta.cuentaId,
+        tipo_saldo=cuenta.tipo_saldo,
+        saldo=cuenta.saldo
     )
     db.add(cuenta_asiento)
     db.commit()
     db.refresh(asiento)
 
     return asiento
+
+
+@app.get("/empresas/{empresa_id}/cuentas_no_principales")
+def obtener_cuentas_no_principales(empresa_id: int, db: Session = Depends(get_db)):
+    # Primero, obtén el ID del plan de cuentas asociado con la empresa
+    plan_cuentas = db.query(PlanCuentas).filter(PlanCuentas.id_empresas == empresa_id).first()
+
+    if not plan_cuentas:
+        raise HTTPException(status_code=404, detail="No se encontró un plan de cuentas para esta empresa.")
+
+    # Obtén las cuentas contables que no son principales
+    cuentas_no_principales = db.query(CuentasContables).filter(
+        CuentasContables.id_plan_cuenta == plan_cuentas.id_plan_cuentas,
+        ~CuentasContables.id_cuenta_contable.in_(
+            db.query(CuentasPrincipales.id_cuenta_contable)
+        )
+    ).all()
+
+    return cuentas_no_principales
 
 @app.post("/tipo_comprobante/crear")
 def crear_tipo_comprobante(request: TipoComprobanteCreateRequest, db: Session = Depends(get_db)):
@@ -578,20 +643,53 @@ def crear_tipo_comprobante(request: TipoComprobanteCreateRequest, db: Session = 
     db.refresh(nuevo_tipo)
     return {"mensaje": "Tipo de comprobante creado con éxito"}
 
-@app.post("/comprobantes/crear")
-def crear_comprobante(titulo: str, descripcion: str, fecha: str, tipo_comprobante: int, archivo: UploadFile = File(...), db: Session = Depends(get_db)):
-    ruta_archivo = f"uploads/{archivo.filename}"
-    with open(ruta_archivo, "wb") as buffer:
-        buffer.write(archivo.file.read())
+@app.get("/asientos/verificar/{empresa_id}/{num_asiento}")
+def verificar_numero_asiento(empresa_id: int, num_asiento: int, db: Session = Depends(get_db)):
+    # Verificar si el número de asiento ya existe para la misma empresa
+    existing_asiento = db.query(AsientosContables).filter(
+        AsientosContables.num_asiento == num_asiento,
+        AsientosContables.id_empresas == empresa_id
+    ).first()
 
-    nuevo_comprobante = Comprobantes(
-        titulo=titulo,
-        descripcion=descripcion,
-        fecha=fecha,
-        archivo=ruta_archivo,
-        tipo_comprobante=tipo_comprobante
-    )
-    db.add(nuevo_comprobante)
-    db.commit()
-    db.refresh(nuevo_comprobante)
-    return {"mensaje": "Comprobante creado con éxito"}
+    if existing_asiento:
+        return {"exists": True}
+    else:
+        return {"exists": False}
+
+@app.post("/comprobantes/crear")
+def crear_comprobante(asiento_id: int, archivo: UploadFile = File(...), db: Session = Depends(get_db)):
+    try:
+        # Buscar el asiento contable correspondiente
+        asiento = db.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
+        if not asiento:
+            raise HTTPException(status_code=404, detail="Asiento no encontrado")
+
+        # Asignar un nombre personalizado al archivo
+        nuevo_nombre_archivo = f"Comprobante_para_asiento_contable_{asiento.num_asiento}.xlsx"
+
+        # Guardar el archivo con el nuevo nombre
+        ruta_archivo = f"uploads/{nuevo_nombre_archivo}"
+        with open(ruta_archivo, "wb") as buffer:
+            buffer.write(archivo.file.read())
+
+        # Crear el comprobante
+        nuevo_comprobante = Comprobantes(
+            titulo=f"Comprobante para el asiento contable {asiento.num_asiento}",
+            descripcion="Descripción del comprobante generado automáticamente.",
+            fecha=date.today(),
+            archivo=ruta_archivo,
+            tipo_comprobante=asiento.tipo_comprobante
+        )
+        db.add(nuevo_comprobante)
+        db.commit()
+        db.refresh(nuevo_comprobante)
+
+        # Asignar el comprobante al asiento
+        asiento.documento_respaldo = nuevo_comprobante.id_comprobante
+        db.commit()
+
+        return {"mensaje": "Comprobante creado y asignado al asiento con éxito"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al crear el comprobante: {str(e)}")

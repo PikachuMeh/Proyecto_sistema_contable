@@ -1,7 +1,14 @@
 $(document).ready(function () {
-    // Cargar tipos de comprobante al inicio
     cargarTiposDeComprobante();
     cargarAsientosContables();
+
+    let empresaSeleccionada = JSON.parse(localStorage.getItem('empresaSeleccionada'));
+    let empresaId = empresaSeleccionada ? empresaSeleccionada.id : null;
+
+    if (!empresaId) {
+        alert("No se ha seleccionado ninguna empresa.");
+        return;
+    }
 
     // Manejar la creación de un nuevo asiento contable
     $('#crear_asiento_btn').click(function () {
@@ -10,13 +17,9 @@ $(document).ready(function () {
         const fechaAsiento = $('#fecha_asiento').val();
         const documentoRespaldo = $('#documento_respaldo')[0].files[0];
 
-        // Validar que el número de asiento sea positivo
-        if (numAsiento <= 0 || isNaN(numAsiento)) {
-            alert('El número de asiento debe ser un número positivo.');
-            return;
-        }
+        // Validación específica para la creación de un asiento
         if (!numAsiento || !tipoComprobanteId || !fechaAsiento || !documentoRespaldo) {
-            alert("Todos los campos son obligatorios.");
+            alert("Todos los campos son obligatorios para crear un asiento.");
             return;
         }
 
@@ -27,66 +30,54 @@ $(document).ready(function () {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('num_asiento', numAsiento);
-        formData.append('tipo_comprobante', tipoComprobanteId);
-        formData.append('fecha', fechaAsiento);
-        formData.append('documento_respaldo', documentoRespaldo);
-
         $.ajax({
-            url: 'http://localhost:9000/asientos',
-            method: 'POST',
-            data: formData,
-            contentType: false,
-            processData: false,
+            url: `http://localhost:9000/asientos/verificar/${empresaId}/${numAsiento}`,
+            method: 'GET',
             success: function (response) {
-                alert('Asiento creado con éxito');
-                cargarAsientosContables();  // Recargar la lista de asientos
+                if (response.exists) {
+                    alert('El número de asiento ya existe para esta empresa.');
+                } else {
+                    const formData = new FormData();
+                    formData.append('num_asiento', numAsiento);
+                    formData.append('tipo_comprobante', tipoComprobanteId);
+                    formData.append('fecha', fechaAsiento);
+                    formData.append('documento_respaldo', documentoRespaldo);
+                    formData.append('empresa_id', empresaId);
+
+                    $.ajax({
+                        url: 'http://localhost:9000/asientos',
+                        method: 'POST',
+                        data: formData,
+                        contentType: false,
+                        processData: false,
+                        success: function (response) {
+                            alert('Asiento creado con éxito');
+                            cargarAsientosContables();
+                        },
+                        error: function (error) {
+                            console.error('Error al crear el asiento:', error);
+                            alert('Hubo un problema al crear el asiento.');
+                        }
+                    });
+                }
             },
-            error: function (error) {
-                console.error('Error al crear el asiento:', error);
-                alert('Hubo un problema al crear el asiento.');
+            error: function (xhr, status, error) {
+                console.error('Error al verificar el número de asiento:', xhr.responseText || error);
+                alert(`Error al verificar el número de asiento: ${xhr.status} ${xhr.statusText}`);
             }
         });
     });
 
-    // Manejar la visualización de un asiento seleccionado
-    $('#lista_asientos_contables').on('click', '.ver-asiento-btn', function () {
-        // Obtener el ID del asiento desde el botón que fue clicado
-        const asientoId = $(this).data('id');
-        
-        // Verificar que el ID del asiento sea válido
-        if (!asientoId) {
-            alert("Selecciona un asiento contable.");
-            return;
-        }
-
-        // Realizar la solicitud GET para obtener los detalles del asiento seleccionado
-        $.ajax({
-            url: `http://localhost:9000/asientos/${asientoId}`,  // Aquí se construye la URL con el ID del asiento
-            method: 'GET',  // Método HTTP GET para obtener los datos
-            success: function (response) {
-                // Si la solicitud tiene éxito, mostrar los detalles del asiento
-                mostrarDetalleAsiento(response);
-            },
-            error: function (error) {
-                // Si ocurre un error, mostrar un mensaje en la consola y un alerta al usuario
-                console.error('Error al cargar el asiento:', error);
-                alert('Hubo un problema al cargar el asiento.');
-            }
-        });
-    });
-
-
-    // Manejar la adición de cuentas a un asiento
+    // Manejar la adición de cuentas al asiento existente
     $('#agregar_cuenta_btn').click(function () {
         const asientoId = $('#detalle_asiento').data('asiento-id');
         const cuentaId = $('#cuenta_contable').val();
         const debeHaber = $('#debe_haber').val();
         const monto = $('#monto').val();
 
+        // Validación específica para agregar una cuenta
         if (!cuentaId || !debeHaber || !monto) {
-            alert("Todos los campos son obligatorios.");
+            alert("Todos los campos son obligatorios para agregar una cuenta.");
             return;
         }
 
@@ -95,13 +86,13 @@ $(document).ready(function () {
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                cuentaId: cuentaId,
+                cuentaId: parseInt(cuentaId),
                 debe_haber: debeHaber,
-                monto: monto
+                monto: parseFloat(monto)
             }),
             success: function (response) {
                 alert('Cuenta agregada con éxito');
-                mostrarDetalleAsiento(response);  // Recargar el detalle del asiento
+                mostrarDetalleAsiento(response);
             },
             error: function (error) {
                 console.error('Error al agregar la cuenta:', error);
@@ -109,8 +100,19 @@ $(document).ready(function () {
             }
         });
     });
-
-    // Funciones auxiliares
+    $('#lista_asientos_contables').on('click', '.ver-asiento-btn', function () {
+        const asientoId = $(this).data('id');
+    
+        if (!asientoId) {
+            alert("Selecciona un asiento contable.");
+            return;
+        }
+    
+        // Redirigir a la página de detalle del asiento
+        window.location.href = `cuentas_asientos.html?asiento_id=${asientoId}`;
+    });
+    
+    // Otras funciones
     function cargarTiposDeComprobante() {
         $.ajax({
             url: 'http://localhost:9000/tipo_comprobante',
@@ -153,14 +155,10 @@ $(document).ready(function () {
 
     function mostrarDetalleAsiento(asiento) {
         $('#detalle_num_asiento').text(`Número de Asiento: ${asiento.num_asiento}`);
-        $('#detalle_tipo_comprobante').text(`Tipo de Comprobante: ${asiento.tipo_comprobante.nombre_comprobante}`);
+        $('#detalle_tipo_comprobante').text(`Tipo de Comprobante: ${asiento.tipo_comprobante}`);
         $('#detalle_fecha_asiento').text(`Fecha del Asiento: ${asiento.fecha}`);
         $('#detalle_asiento').data('asiento-id', asiento.id_asiento_contable).show();
 
-        const listaCuentas = $('#lista_cuentas');
-        listaCuentas.empty();
-        asiento.cuentas.forEach(cuenta => {
-            listaCuentas.append(`<li>${cuenta.nombre_cuenta} - ${cuenta.debe_haber} - ${cuenta.monto}</li>`);
-        });
+        
     }
 });

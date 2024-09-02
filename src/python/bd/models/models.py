@@ -8,20 +8,20 @@ class AsientosContables(Base):
 
     id_asiento_contable = Column(Integer, primary_key=True, autoincrement=True)
     num_asiento = Column(Integer, nullable=False)
-    documento_respaldo = Column(Integer, ForeignKey('comprobantes.id_comprobante'), nullable=False)  # Asume que es una clave foránea
+    documento_respaldo = Column(Text, nullable=False)
     fecha = Column(Date, nullable=False)
+    id_empresas = Column(Integer, ForeignKey('empresas.id_empresas'), nullable=False)
     cierre_contable = Column(Integer, ForeignKey('cierre_contable.id_cierre_contable'), nullable=False)
     tipo_comprobante = Column(Integer, ForeignKey('tipo_comprobante.id_tipo_comprobante'), nullable=False)
     id_cuentas_principales = Column(Integer, ForeignKey('cuentas_principales.id_cuentas_principales'), nullable=True)
 
-    # Relación con la tabla comprobantes
-    comprobante = relationship("Comprobantes", back_populates="asientos")
-    reportes = relationship("Reportes", back_populates="asiento_contable")
     # Relación con otras tablas
-    cuentas_contables_asientos = relationship("CuentasContablesAsientosContables", back_populates="asiento_contable")
+    empresa = relationship("Empresas", back_populates="asientos_contables")
     cierre = relationship("CierreContable", back_populates="asientos_contables")
-    cuenta_principal = relationship("CuentasPrincipales", back_populates="asientos_contables")
-
+    comprobante = relationship("TipoComprobante", back_populates="asientos")
+    cuentas_principales = relationship("CuentasPrincipales", back_populates="asientos_contables")
+    cuentas = relationship("CuentasContablesAsientosContables", back_populates="asiento_contable")
+    reportes = relationship("Reportes", back_populates="asiento_contable")  # Agrega esta relación
 
 
 class Bitacora(Base):
@@ -56,10 +56,9 @@ class Comprobantes(Base):
     archivo = Column(Text, nullable=False)
     tipo_comprobante = Column(Integer, ForeignKey('tipo_comprobante.id_tipo_comprobante'), nullable=False)
 
-    # Relación con la tabla asientos contables
-    asientos = relationship("AsientosContables", back_populates="comprobante")
     tipo = relationship("TipoComprobante", back_populates="comprobantes")
-    
+
+
 class CuentasContables(Base):
     __tablename__ = 'cuentas_contables'
 
@@ -76,14 +75,16 @@ class CuentasContables(Base):
     cuentas_principales = relationship("CuentasPrincipales", back_populates="cuenta_contable")
     asientos_contables_asientos = relationship("CuentasContablesAsientosContables", back_populates="cuenta_contable")
 
+
 class CuentasContablesAsientosContables(Base):
     __tablename__ = 'cuentas_contables_asientos_contables'
 
     id_asiento_contable = Column(Integer, ForeignKey('asientos_contables.id_asiento_contable'), primary_key=True)
     id_cuenta_contable = Column(Integer, ForeignKey('cuentas_contables.id_cuenta_contable'), primary_key=True)
+    tipo_saldo = Column(String(10), nullable=False)
+    saldo = Column(Float, nullable=False)
 
-    # Relaciones opcionales, dependiendo de cómo quieras navegar en los modelos
-    asiento_contable = relationship("AsientosContables", back_populates="cuentas_contables_asientos")
+    asiento_contable = relationship("AsientosContables", back_populates="cuentas")
     cuenta_contable = relationship("CuentasContables", back_populates="asientos_contables_asientos")
 
 class CuentasPrincipales(Base):
@@ -97,7 +98,7 @@ class CuentasPrincipales(Base):
     id_cuenta_contable = Column(Integer, ForeignKey('cuentas_contables.id_cuenta_contable'), nullable=False)
 
     cuenta_contable = relationship("CuentasContables", back_populates="cuentas_principales")
-    asientos_contables = relationship("AsientosContables", back_populates="cuenta_principal")
+    asientos_contables = relationship("AsientosContables", back_populates="cuentas_principales")
 
 
 class Departamentos(Base):
@@ -126,6 +127,7 @@ class Empresas(Base):
     departamentos = relationship("Departamentos", back_populates="empresa")
     plan_cuentas = relationship("PlanCuentas", back_populates="empresa")
     registros_movimientos = relationship("RegistrosMovimientos", back_populates="empresa")
+    asientos_contables = relationship("AsientosContables", back_populates="empresa")
 
 
 class MovimientosPlan(Base):
@@ -200,8 +202,9 @@ class TipoComprobante(Base):
     id_tipo_comprobante = Column(Integer, primary_key=True, autoincrement=True)
     nombre_comprobante = Column(Text, nullable=False)
     
-    # Relación con la tabla comprobantes
     comprobantes = relationship("Comprobantes", back_populates="tipo")
+    asientos = relationship("AsientosContables", back_populates="comprobante")
+
 
 class Usuarios(Base):
     __tablename__ = 'usuarios'
@@ -213,4 +216,3 @@ class Usuarios(Base):
 
     bitacora = relationship("Bitacora", back_populates="usuario")
     movimientos_usuarios = relationship("MovimientosUsuarios", back_populates="usuario")
-
