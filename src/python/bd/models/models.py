@@ -1,7 +1,7 @@
 from ..base import engine, Base  # Importa Base desde base.py
 import datetime
 from sqlalchemy import (Double, Table, Column, Integer, String, Text, Float, CHAR, Boolean, Date, Time, TIMESTAMP, ForeignKey, Uuid, BigInteger,VARCHAR)
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 class AsientosContables(Base):
     __tablename__ = 'asientos_contables'
@@ -14,6 +14,7 @@ class AsientosContables(Base):
     cierre_contable = Column(Integer, ForeignKey('cierre_contable.id_cierre_contable'), nullable=False)
     tipo_comprobante = Column(Integer, ForeignKey('tipo_comprobante.id_tipo_comprobante'), nullable=False)
     id_cuentas_principales = Column(Integer, ForeignKey('cuentas_principales.id_cuentas_principales'), nullable=True)
+    periodo_contable_id = Column(Integer, ForeignKey('periodos_contables.id_periodo_contable'), nullable=True)
 
     # Relación con otras tablas
     empresa = relationship("Empresas", back_populates="asientos_contables")
@@ -128,6 +129,7 @@ class Empresas(Base):
     plan_cuentas = relationship("PlanCuentas", back_populates="empresa")
     registros_movimientos = relationship("RegistrosMovimientos", back_populates="empresa")
     asientos_contables = relationship("AsientosContables", back_populates="empresa")
+    periodos_contables = relationship("PeriodosContables", back_populates="empresa")
 
 
 class MovimientosPlan(Base):
@@ -150,6 +152,23 @@ class MovimientosUsuarios(Base):
 
     usuario = relationship("Usuarios", back_populates="movimientos_usuarios")
     registro = relationship("RegistrosMovimientos", back_populates="movimientos_usuarios")
+
+class PeriodosContables(Base):
+    __tablename__ = 'periodos_contables'
+
+    id_periodo_contable = Column(Integer, primary_key=True, autoincrement=True)
+    id_empresa = Column(Integer, ForeignKey('empresas.id_empresas'), nullable=False)
+    numero_periodo = Column(Integer, nullable=False)
+    fecha_inicio = Column(Date, nullable=False)
+    fecha_fin = Column(Date, nullable=False)
+    estado = Column(String, nullable=False)
+
+    empresa = relationship("Empresas", back_populates="periodos_contables")
+    asientos_contables = relationship(
+        "AsientosContables",
+        primaryjoin="and_(PeriodosContables.id_periodo_contable == AsientosContables.periodo_contable_id)",
+        backref=backref("periodo_contable", uselist=False)
+    )
 
 
 class PlanCuentas(Base):

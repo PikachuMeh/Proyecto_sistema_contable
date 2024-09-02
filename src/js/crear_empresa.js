@@ -117,6 +117,20 @@ $(document).ready(function () {
             data: JSON.stringify(empresaData),
             success: function (response) {
                 alert('Empresa y departamentos creados con éxito.');
+
+                // Iniciar el primer periodo contable para la nueva empresa
+                $.ajax({
+                    url: `http://localhost:9000/empresas/${response.empresa_id}/iniciar_periodo`,
+                    method: 'POST',
+                    success: function (response) {
+                        console.log('Periodo contable iniciado:', response);
+                    },
+                    error: function (error) {
+                        console.error('Error al iniciar el periodo contable:', error);
+                        alert('Hubo un problema al iniciar el periodo contable.');
+                    }
+                });
+
                 window.location.href = 'empresas.html';
             },
             error: function (error) {

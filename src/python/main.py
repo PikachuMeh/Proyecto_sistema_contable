@@ -10,8 +10,8 @@ import tempfile
 import string
 import json
 import re
-from datetime import date, datetime
-from bd.models.models import AsientosContables,Bitacora,CuentasContables,CuentasContablesAsientosContables,Empresas,Departamentos,PlanCuentas,RegistrosMovimientos,Reportes,Comprobantes,TipoComprobante,Usuarios,CierreContable,CuentasPrincipales,MovimientosPlan,MovimientosUsuarios
+from datetime import date, datetime, timedelta
+from bd.models.models import AsientosContables,Bitacora,PeriodosContables,CuentasContables,CuentasContablesAsientosContables,Empresas,Departamentos,PlanCuentas,RegistrosMovimientos,Reportes,Comprobantes,TipoComprobante,Usuarios,CierreContable,CuentasPrincipales,MovimientosPlan,MovimientosUsuarios
 from email.message import EmailMessage
 import openpyxl
 import random
@@ -530,23 +530,21 @@ def get_asiento(asiento_id: int, db: Session = Depends(get_db)):
     if not asiento:
         raise HTTPException(status_code=404, detail="Asiento no encontrado")
 
-    print(f"Asiento encontrado: {asiento}")  # Verifica que el asiento se cargue
+    # Verificar si el asiento está asociado a un cierre contable cerrado
+    cierre = db.query(CierreContable).filter(CierreContable.id_cierre_contable == asiento.cierre_contable).first()
+    estado_asiento = "Abierto"
+    if cierre and cierre.estado == 'Cerrado':
+        estado_asiento = "Cerrado"
 
     # Obtener el comprobante a partir de la relación correcta en lugar de documento_respaldo
     comprobante = db.query(Comprobantes).filter_by(id_comprobante=asiento.documento_respaldo).first()
+    tipo_comprobante = "Desconocido"
     if comprobante:
-        print(f"Comprobante encontrado: {comprobante}")
         if comprobante.tipo_comprobante:
-            tipo_comprobante = db.query(TipoComprobante).filter_by(id_tipo_comprobante=comprobante.tipo_comprobante).first()
-            if tipo_comprobante:
-                print(f"Tipo de comprobante encontrado: {tipo_comprobante.nombre_comprobante}")
-            else:
-                print("El tipo de comprobante no se encontró.")
-        else:
-            print("El tipo de comprobante no se encontró.")
-    else:
-        raise HTTPException(status_code=404, detail="El comprobante no fue encontrado para este asiento")
-    
+            tipo_comprobante_obj = db.query(TipoComprobante).filter_by(id_tipo_comprobante=comprobante.tipo_comprobante).first()
+            if tipo_comprobante_obj:
+                tipo_comprobante = tipo_comprobante_obj.nombre_comprobante
+
     cuentas_asiento = db.query(CuentasContablesAsientosContables).filter_by(id_asiento_contable=asiento_id).all()
     cuentas = [
         {
@@ -556,13 +554,15 @@ def get_asiento(asiento_id: int, db: Session = Depends(get_db)):
         }
         for cuenta in cuentas_asiento
     ]
-    
+
     return {
         "num_asiento": asiento.num_asiento,
-        "tipo_comprobante": tipo_comprobante.nombre_comprobante if comprobante and tipo_comprobante else "Desconocido",
+        "tipo_comprobante": tipo_comprobante,
         "fecha": asiento.fecha,
-        "cuentas": cuentas
+        "cuentas": cuentas,
+        "estado": estado_asiento
     }
+
 
 @app.put("/asientos/{asiento_id}")
 def modificar_asiento(asiento_id: int, nuevo_num_asiento: int, nuevo_tipo_comprobante: int, db: Session = Depends(get_db)):
@@ -656,6 +656,7 @@ def verificar_numero_asiento(empresa_id: int, num_asiento: int, db: Session = De
     else:
         return {"exists": False}
 
+
 @app.post("/asientos/{asiento_id}/cerrar")
 def cerrar_asiento(asiento_id: int, db: Session = Depends(get_db)):
     asiento = db.query(AsientosContables).filter(AsientosContables.id_asiento_contable == asiento_id).first()
@@ -684,7 +685,11 @@ def cerrar_asiento(asiento_id: int, db: Session = Depends(get_db)):
     cierre.fecha_contable_cierre = date.today()
     db.commit()
 
-    return {"mensaje": "Asiento cerrado correctamente"}
+    # Devuelve el asiento actualizado incluyendo su estado
+    return {
+        "mensaje": "Asiento cerrado correctamente",
+        "estado": "Cerrado"
+    }
 
 @app.post("/comprobantes/crear")
 def crear_comprobante(asiento_id: int, archivo: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -723,3 +728,93 @@ def crear_comprobante(asiento_id: int, archivo: UploadFile = File(...), db: Sess
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al crear el comprobante: {str(e)}")
+    
+# Añadir un endpoint para iniciar un nuevo periodo contable
+@app.post("/empresas/{empresa_id}/iniciar_periodo")
+def iniciar_periodo_contable(empresa_id: int, db: Session = Depends(get_db)):
+    # Obtener el último periodo contable de la empresa
+    ultimo_periodo = db.query(PeriodosContables).filter(
+        PeriodosContables.id_empresa == empresa_id
+    ).order_by(PeriodosContables.numero_periodo.desc()).first()
+
+    if ultimo_periodo and ultimo_periodo.estado == 'Abierto':
+        raise HTTPException(status_code=400, detail="No se puede iniciar un nuevo periodo mientras el anterior está abierto.")
+
+    nuevo_numero_periodo = 1 if not ultimo_periodo else ultimo_periodo.numero_periodo + 1
+    fecha_inicio = date.today()
+    fecha_fin = fecha_inicio.replace(day=1) + timedelta(days=32)
+    fecha_fin = fecha_fin.replace(day=1) - timedelta(days=1)
+
+    nuevo_periodo = PeriodosContables(
+        id_empresa=empresa_id,
+        numero_periodo=nuevo_numero_periodo,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+        estado='Abierto'
+    )
+
+    db.add(nuevo_periodo)
+    db.commit()
+    db.refresh(nuevo_periodo)
+
+    return {"mensaje": "Nuevo periodo contable iniciado con éxito", "periodo": nuevo_periodo}
+
+
+# Endpoint para cerrar un periodo contable (ya incluido antes)
+@app.post("/empresas/{empresa_id}/cerrar_periodo/{numero_periodo}")
+def cerrar_periodo_contable(empresa_id: int, numero_periodo: int, db: Session = Depends(get_db)):
+    periodo = db.query(PeriodosContables).filter(
+        PeriodosContables.id_empresa == empresa_id,
+        PeriodosContables.numero_periodo == numero_periodo,
+        PeriodosContables.estado == 'Abierto'
+    ).first()
+
+    if not periodo:
+        raise HTTPException(status_code=404, detail="Periodo contable no encontrado o ya está cerrado")
+
+    # Obtener todos los asientos cerrados del periodo
+    asientos_cerrados = db.query(AsientosContables).filter(
+        AsientosContables.id_empresas == empresa_id,
+        AsientosContables.fecha.between(periodo.fecha_inicio, periodo.fecha_fin),
+        AsientosContables.cierre_contable != None
+    ).all()
+
+    # Verificar si todos los asientos están cerrados
+    if not asientos_cerrados:
+        raise HTTPException(status_code=400, detail="No se encontraron asientos cerrados para cerrar el periodo contable")
+
+    periodo.estado = 'Cerrado'
+    db.commit()
+
+    return {"mensaje": "Periodo contable cerrado correctamente"}
+
+# Endpoint para generar reportes (ya incluido antes)
+@app.post("/reportes/{tipo_reporte}")
+def generar_reporte(tipo_reporte: str, request: dict, db: Session = Depends(get_db)):
+    fecha_reporte = request.get('fecha')
+    if not fecha_reporte:
+        raise HTTPException(status_code=400, detail="Fecha no proporcionada")
+
+    if tipo_reporte == 'diario':
+        asientos_cerrados = db.query(AsientosContables).join(CierreContable).filter(
+            CierreContable.estado == 'Cerrado',
+            AsientosContables.fecha == fecha_reporte
+        ).all()
+
+    elif tipo_reporte == 'mensual':
+        mes_inicio = f"{fecha_reporte}-01"
+        mes_fin = f"{fecha_reporte}-31"
+
+        asientos_cerrados = db.query(AsientosContables).join(CierreContable).filter(
+            CierreContable.estado == 'Cerrado',
+            AsientosContables.fecha.between(mes_inicio, mes_fin)
+        ).all()
+
+    else:
+        raise HTTPException(status_code=400, detail="Tipo de reporte inválido")
+
+    if not asientos_cerrados:
+        raise HTTPException(status_code=404, detail="No se encontraron asientos cerrados para el periodo seleccionado")
+
+    reporte = generar_reporte(asientos_cerrados)
+    return reporte

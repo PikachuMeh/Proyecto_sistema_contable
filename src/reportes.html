@@ -3,15 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Generar Reportes</title>
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/reportes.js"></script>
 </head>
 <body>
-    <div id="menu">
-        <ul>
-            <li> <a href="Libros/diario.html">Libro Diario</li>
-            <li> <a href="Libros/comprobacion.html">Balance de Comprobacion</li>
-            <li> <a href="#">Ganancias y Perdidas</li>
-        </ul>
+    <h1>Generar Reportes</h1>
+
+    <!-- Formulario para seleccionar el tipo de reporte -->
+    <div id="seleccion_reporte">
+        <h3>Generar Reporte</h3>
+        <label for="tipo_reporte">Tipo de Reporte:</label>
+        <select id="tipo_reporte">
+            <option value="diario">Diario</option>
+            <option value="mensual">Mensual</option>
+        </select><br>
+
+        <!-- Fecha para reporte diario -->
+        <div id="fecha_diaria">
+            <label for="fecha_reporte">Fecha del Reporte:</label>
+            <input type="date" id="fecha_reporte">
+        </div>
+
+        <!-- Selección de mes para reporte mensual -->
+        <div id="mes_mensual" style="display: none;">
+            <label for="mes_reporte">Mes del Reporte:</label>
+            <input type="month" id="mes_reporte">
+        </div>
+
+        <button type="button" id="generar_reporte_btn">Generar Reporte</button>
     </div>
+
+    <!-- Sección para mostrar el reporte generado -->
+    <div id="resultado_reporte">
+        <!-- El reporte se mostrará aquí -->
+    </div>
+
+    <!-- Botón para volver al menú principal -->
+    <button id="volver_btn">Volver al Menú Principal</button>
+
 </body>
 </html>
