@@ -1,18 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-<script src="pruebas.js"></script>
+<title>Sistema Contable| Blog</title>
+<meta charset="utf-8">
+<link type="text/css" rel="stylesheet" href="css/style.css">
+<!--[if IE 6]><link type="text/css" rel="stylesheet" href="styles/ie6.css"><![endif]-->
+<!--[if IE 7]><link type="text/css" rel="stylesheet" href="styles/ie7.css"><![endif]-->
 </head>
 <body>
+<div id="wrap">
+  <div id="header">
+    <h1>ASAP Company</h1>
+    <h2>Transparencia en tus Asientos contables</h2>
+    <div id="nav">
+      <ul id="nav-pages">
+        <li><a href="menu.html" class="current">Home</a><span>/</span></li>
+        <li><a href="empresas.html">Empresas</a><span>/</span></li>
+        <li><a href="asientos_contables.html">Asientos </a><span>/</span></li>
+        <li><a href="crear_plan.html">Crear Plan de Cuentas</a><span>/</span></li>
+        <li><a href="plan_cuentas.html">Plan de cuentas</a><span>/</span></li>
+        <li><a href="reportes.html">Reportes</a></li><span>/</span></li>
+      </ul>
+    </div>
+  </div>
+  <style>
+    /* Estilos básicos para el modal */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+        padding-top: 60px;
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+    }
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    .close:hover, .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+<h2>Modificar Plan de Cuentas</h2>
 
-    
-    <button id="click">ola</button>
+<button id="open-modal-btn">Agregar Cuenta</button>
 
+<div id="cuentas-principales">
+    <h2>Cuentas Principales</h2>
+    <div id="lista-cuentas-principales"></div>
+</div>
+
+<div id="cuentas-contables">
+    <h2>Cuentas Normales</h2>
+    <div id="lista-cuentas-normales"></div>
+</div>
+<!-- Modal para agregar cuenta -->
+<div id="add-account-modal" class="modal">
+  <div class="modal-content">
+      <span class="close" id="close-modal-btn">&times;</span>
+      <h2>Agregar Nueva Cuenta</h2>
+      <form id="agregar_cuenta">
+          <label for="codigo">Código de Cuenta:</label>
+          <input type="text" id="codigo" name="codigo" required><br><br>
+          <label for="descripcion">Descripción de la Cuenta:</label>
+          <input type="text" id="descripcion" name="descripcion" required><br><br>
+          <label for="saldo">Saldo:</label>
+          <input type="number" id="saldo" name="saldo" required><br><br>
+          <button type="submit">Agregar Cuenta</button>
+      </form>
+  </div>
+</div>
+<button id="volver-listado">Volver al Listado de Planes de Cuentas</button>
+<script src="js/modificar_plan.js"></script>
 </body>
-<script src="js/jquery-3.7.1.min.js"></script>
-<script src="js/pruebas.js"></script>
-
+<div id="footer">
+  <p class="copyright">Todos los derechos reservados 2024 Copyright &copy;</p>
+</div>
+</body>
 </html>

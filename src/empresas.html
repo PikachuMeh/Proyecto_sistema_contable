@@ -1,28 +1,55 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de Empresas</title>
-    <script src="js/jquery-3.7.1.min.js"></script>
-
+<title> Sistema contable| Empresas </title>
+<meta charset="utf-8">
+<link type="text/css" rel="stylesheet" href="css/style.css">
+<script src="js/jquery-3.7.1.min.js"></script>
+<script src="js/pruebas.js"></script>
+<!--[if IE 6]><link type="text/css" rel="stylesheet" href="styles/ie6.css"><![endif]-->
+<!--[if IE 7]><link type="text/css" rel="stylesheet" href="styles/ie7.css"><![endif]-->
 </head>
 <body>
-    <h1>Buscador de Empresas</h1>
+<div id="wrap">
+  <div id="header">
+    <h1>ASAP Company</h1>
+    <h2>Transparencia en tus Asientos contables</h2>
+    <div id="nav">
+      <ul id="nav-pages">
+        <li><a href="menu.html" class="current">Home</a><span>/</span></li>
+        <li><a href="empresas.html">Empresas</a><span>/</span></li>
+        <!--<li><a href="asientos_contables.html">Asientos </a><span>/</span></li>
+        <li><a href="crear_plan.html">Crear Plan de Cuentas</a><span>/</span></li>
+        <li><a href="plan_cuentas.html">Plan de cuentas</a><span>/</span></li>-->
+        <li><a href="reportes.html">Reportes</a></li><span>/</span></li>
+      </ul>
+    </div>
+  </div>
+  <div id="main">
+    <div id="content">
+      <h2 class="title">Buscador de empresas</h2>
+      <input type="number" id="empresa-search" placeholder="Ingrese rif de la empresa...">
+      <button id="search-btn">Buscar</button>
+  
+      <!-- Botón para crear una nueva empresa -->
+      <div>
+        <button onclick="window.location.href='crear_empresa.html';">Empresa Nueva</button>
+    </div>
+      
+  
+      <div id="search-results"></div>
+  
+      <h2>Planes de Cuentas</h2>
+      <div id="planes-de-cuentas"></div>
+  
+      <!-- Contenedor para el botón de generar asientos contables -->
+      <div id="asientos-contables-container"></div>
+    </div>
     
-    <input type="number" id="empresa-search" placeholder="Ingrese rif de la empresa...">
-    <button id="search-btn">Buscar</button>
-
-    <!-- Botón para crear una nueva empresa -->
-    <button id="crear-empresa-btn">Crear Nueva Empresa</button>
-
-    <div id="search-results"></div>
-
-    <h2>Planes de Cuentas</h2>
-    <div id="planes-de-cuentas"></div>
-
-    <!-- Contenedor para el botón de generar asientos contables -->
-    <div id="asientos-contables-container"></div>
-
-    <script src="js/pruebas.js"></script>
+  </div>
+  <div id="footer">
+    <p class="copyright">Todos los derechos reservados 2024 Copyright &copy;</p>
+  </div>
+</div>
 </body>
 </html>

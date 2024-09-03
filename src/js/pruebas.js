@@ -20,10 +20,10 @@ $(function () {
         const empresaId = $(this).data('id');
         const empresaNombre = $(this).data('nombre');
         console.log("ID de la empresa seleccionada:", empresaId);
-        
+    
         // Guarda la empresa seleccionada en localStorage
         localStorage.setItem('empresaSeleccionada', JSON.stringify({ id: empresaId, nombre: empresaNombre }));
-        
+    
         // Llama a la función para obtener los planes de cuentas
         obtenerPlanesCuentas(empresaId);
     });

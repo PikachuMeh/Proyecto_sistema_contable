@@ -176,7 +176,6 @@ class CuentaNueva(BaseModel):
     saldo: float
 
 class DepartamentoResponse(BaseModel):
-    id_departamento: int
     nombre_departamento: str
 
 class EmpresaCreateRequest(BaseModel):
@@ -424,33 +423,43 @@ def agregar_cuenta(empresa_id: int, plan_id: int, cuenta: CuentaNueva, db: Sessi
 
 @app.post("/empresas/crear")
 def crear_empresa(empresa: EmpresaCreateRequest, db: Session = Depends(get_db)):
-    existe_empresa = db.query(Empresas).filter_by(rif=empresa.rif).first()
-    if existe_empresa:
-        raise HTTPException(status_code=400, detail="Ya existe una empresa con este RIF.")
+    try:
+        existe_empresa = db.query(Empresas).filter_by(rif=empresa.rif).first()
+        if existe_empresa:
+            raise HTTPException(status_code=400, detail="Ya existe una empresa con este RIF.")
 
-    nueva_empresa = Empresas(
-        nombre=empresa.nombre,
-        fecha_constitucion=empresa.fecha_constitucion,
-        rif=empresa.rif,
-        fecha_ejercicio_economico=empresa.fecha_ejercicio_economico,
-        actividad_economica=empresa.actividad_economica,
-        direccion=empresa.direccion,
-        correo=empresa.correo
-    )
-    db.add(nueva_empresa)
-    db.commit()
-    db.refresh(nueva_empresa)
-
-    for depto in empresa.departamentos:
-        nuevo_departamento = Departamentos(
-            nombre_departamento=depto.nombre_departamento,
-            id_empresa=nueva_empresa.id_empresas
+        nueva_empresa = Empresas(
+            nombre=empresa.nombre,
+            fecha_constitucion=empresa.fecha_constitucion,
+            rif=empresa.rif,
+            fecha_ejercicio_economico=empresa.fecha_ejercicio_economico,
+            actividad_economica=empresa.actividad_economica,
+            direccion=empresa.direccion,
+            correo=empresa.correo
         )
-        db.add(nuevo_departamento)
+        db.add(nueva_empresa)
+        db.commit()
+        db.refresh(nueva_empresa)
 
-    db.commit()
+        for depto in empresa.departamentos:
+            nuevo_departamento = Departamentos(
+                nombre_departamento=depto.nombre_departamento,
+                id_empresa=nueva_empresa.id_empresas
+            )
+            db.add(nuevo_departamento)
 
-    return {"mensaje": "Empresa y departamentos creados con éxito.", "empresa_id": nueva_empresa.id_empresas}
+        db.commit()
+
+        return {"mensaje": "Empresa y departamentos creados con éxito.", "empresa_id": nueva_empresa.id_empresas}
+
+    except HTTPException as e:
+        db.rollback()
+        print(f"HTTPException: {e.detail}")  # Agrega este print para depurar
+        raise e
+    except Exception as e:
+        db.rollback()
+        print(f"Error al crear la empresa: {e}")  # Agrega este print para depurar
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 @app.get("/tipo_comprobante")
 def get_tipos_comprobante(db: Session = Depends(get_db)):

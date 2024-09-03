@@ -1,14 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Crear Plan de Cuentas</title>
-    <script src="js/jquery-3.7.1.min.js"></script>
-    <script src="js/crear_plan.js"></script>
+<title>Sistema Contable| Empresa</title>
+<meta charset="utf-8">
+<link type="text/css" rel="stylesheet" href="css/style.css">
+<script src="js/jquery-3.7.1.min.js"></script>
+<script src="js/crear_plan.js"></script>
+<!--[if IE 6]><link type="text/css" rel="stylesheet" href="styles/ie6.css"><![endif]-->
+<!--[if IE 7]><link type="text/css" rel="stylesheet" href="styles/ie7.css"><![endif]-->
 </head>
 <body>
-
-    <h1>Crear Plan de Cuentas para <span id="empresa-nombre"></span></h1>
+<div id="wrap">
+  <div id="header">
+    <h1>ASAP Company</h1>
+    <h2>Transparencia en tus Asientos contables</h2>
+    <div id="nav">
+      <ul id="nav-pages">
+        <li><a href="menu.html" class="current">Home</a><span>/</span></li>
+        <li><a href="empresas.html">Empresas</a><span>/</span></li>
+        <!--<li><a href="asientos_contables.html">Asientos </a><span>/</span></li>
+        <li><a href="crear_plan.html">Crear Plan de Cuentas</a><span>/</span></li>
+        <li><a href="plan_cuentas.html">Plan de cuentas</a><span>/</span></li>-->
+        <li><a href="reportes.html">Reportes</a></li><span>/</span></li>
+      </ul>
+    </div>
+  </div>
+  <div id="portfolio">
+    <h2>Crear Plan de Cuentas  <span id="empresa-nombre"></span></h2>
 
     <!-- Selección de la opción -->
     <label>
@@ -17,57 +35,19 @@
     <label>
         <input type="radio" name="plan-option" value="archivo"> Agregar Plan de Cuentas mediante archivo Excel
     </label>
-
-    <!-- Seleccionar el departamento -->
-    <div id="departamento-section">
-        <label for="departamento-select">Seleccionar Departamento:</label>
-        <select id="departamento-select">
-            <!-- Aquí se llenarán las opciones de los departamentos con JS -->
-        </select>
-    </div>
-
-    <!-- Formulario para crear un plan de cuentas desde cero -->
-    <form id="crear-plan-form" >
-        <p>Deshabilitado por ahora</p>
-        <h2>Crear Plan de Cuentas</h2>
-        <label for="codigo-cuenta">Código de Cuenta:</label>
-        <input type="number" id="codigo-cuenta" required disabled><br>
-
-        <label for="descripcion-cuenta">Descripción de la Cuenta:</label>
-        <input type="text" id="descripcion-cuenta" required disabled><br>
-
-        <label for="nombre-cuenta">Nombre de la Cuenta:</label>
-        <input type="text" id="nombre-cuenta" required disabled><br>
-
-        <label for="nivel-cuenta">Nivel de la Cuenta:</label>
-        <input type="number" id="nivel-cuenta" required disabled><br>
-
-        <label for="tipo-cuenta">Tipo de Cuenta:</label>
-        <input type="number" id="tipo-cuenta" required disabled><br>
-
-        <label for="saldo-normal">Saldo Normal:</label>
-        <input type="number" id="saldo-normal" required disabled><br>
-
-        <label for="fecha">Fecha:</label>
-        <input type="date" id="fecha" required disabled><br>
-
-        <label for="documento-respaldo">Documento Respaldo:</label>
-        <input type="text" id="documento-respaldo" required disabled><br>
-
-        <button type="button" id="add-cuenta-btn" disabled>Agregar Cuenta</button>
-        <ul id="cuentas-list"></ul>
-
-        <button type="button" id="crear-plan-btn" disabled>Crear Plan de Cuentas</button>
-    </form>
-
-    <!-- Formulario para agregar un plan de cuentas mediante archivo Excel -->
     <form id="agregar-plan-form" style="display:none;">
-        <h2>Agregar Plan de Cuentas mediante archivo Excel</h2>
-        <label for="archivo-excel">Subir archivo Excel:</label>
-        <input type="file" id="archivo-excel" accept=".xlsx" required><br>
+      <h2>Agregar Plan de Cuentas mediante archivo Excel</h2>
+      <label for="archivo-excel">Subir archivo Excel:</label>
+      <input type="file" id="archivo-excel" accept=".xlsx" required><br>
 
-        <button type="button" id="upload-plan-btn">Subir Plan de Cuentas</button>
-    </form>
+      <button type="button" id="upload-plan-btn">Subir Plan de Cuentas</button>
+  </form>
 
+  </form>
+  </div>
+  <div id="footer">
+  <p class="copyright">Todos los derechos reservados 2024 Copyright &copy;</p>
+  </div>
+</div>
 </body>
 </html>

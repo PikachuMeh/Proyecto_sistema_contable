@@ -1,54 +1,81 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Empresa</title>
-    <script src="js/jquery-3.7.1.min.js"></script>
+<title> Sistema contable| Empresas </title>
+<meta charset="utf-8">
+<link type="text/css" rel="stylesheet" href="css/style.css">
+<script src="js/jquery-3.7.1.min.js"></script>
+<script src="js/crear_empresa.js"></script>
+<!--[if IE 6]><link type="text/css" rel="stylesheet" href="styles/ie6.css"><![endif]-->
+<!--[if IE 7]><link type="text/css" rel="stylesheet" href="styles/ie7.css"><![endif]-->
 </head>
 <body>
-    <h1>Crear Empresa</h1>
+<div id="wrap">
+  <div id="header">
+    <h1>ASAP Company</h1>
+    <h2>Transparencia en tus Asientos contables</h2>
+    <div id="nav">
+      <ul id="nav-pages">
+        <li><a href="menu.html" class="current">Home</a><span>/</span></li>
+        <li><a href="empresas.html">Empresas</a><span>/</span></li>
+        <li><a href="asientos_contables.html">Asientos </a><span>/</span></li>
+        <li><a href="crear_plan.html">Crear Plan de Cuentas</a><span>/</span></li>
+        <li><a href="plan_cuentas.html">Plan de cuentas</a><span>/</span></li>
+        <li><a href="reportes.html">Reportes</a></li><span>/</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+<div id="sidebar-contact">
+  <h2>Sabias que?</h2>
+  <h4>Todas las empresas que se han unido han optimizado sus trabajos contables?</h4> <br>
+  <h2>Sabias que?</h2>
+  <h4> La primera empresa en usar prototipos de nuestro sistema fue Carper? Gracias a sus planes contables, salio adelante este sistema</h4>
+</div>
+  <h2>Datos Requeridos</h2>
 
-    <form id="crearEmpresaForm">
-        <!-- Campos de la empresa -->
-        <label for="nombre">Nombre de la Empresa:</label>
-        <input type="text" id="nombre" name="nombre" required><br><br>
+  <form id="crearEmpresaForm">
+      <!-- Campos de la empresa -->
+      <label for="nombre">Nombre de la Empresa:</label>
+      <input type="text" id="nombre" name="nombre" required><br>
 
-        <label for="fecha_constitucion">Fecha de Constitución:</label>
-        <input type="date" id="fecha_constitucion" name="fecha_constitucion" required><br><br>
+      <label for="fecha_constitucion">Fecha de Constitución:</label>
+      <input type="date" id="fecha_constitucion" name="fecha_constitucion" required> <br>
 
-        <label for="tipo_rif">Tipo de RIF:</label>
-        <select id="tipo_rif" name="tipo_rif" required>
-            <option value="J">J</option>
-            <option value="G">G</option>
-            <option value="V">V</option>
-            <option value="E">E</option>
-        </select>
-        <label for="rif_numero">Número de RIF:</label>
-        <input type="text" id="rif_numero" name="rif_numero" required><br><br>
+      <label for="tipo_rif">Tipo de RIF:</label>
+      <select id="tipo_rif" name="tipo_rif" required>
+          <option value="J">J</option>
+          <option value="G">G</option>
+          <option value="V">V</option>
+          <option value="E">E</option>
+      </select>
+      <label for="rif_numero"> <br> Número de RIF:</label>
+      <input type="text" id="rif_numero" name="rif_numero" required><br>
 
-        <label for="fecha_ejercicio_economico">Fecha de Ejercicio Económico:</label>
-        <input type="date" id="fecha_ejercicio_economico" name="fecha_ejercicio_economico" required><br><br>
+      <label for="fecha_ejercicio_economico">Fecha de Ejercicio Económico:</label>
+      <input type="date" id="fecha_ejercicio_economico" name="fecha_ejercicio_economico" required><br>
 
-        <label for="actividad_economica">Actividad Económica:</label>
-        <input type="text" id="actividad_economica" name="actividad_economica" required><br><br>
+      <label for="actividad_economica">Actividad Económica:</label>
+      <input type="text" id="actividad_economica" name="actividad_economica" required><br>
 
-        <label for="direccion">Dirección:</label>
-        <input type="text" id="direccion" name="direccion" required><br><br>
+      <label for="direccion">Dirección:</label>
+      <input type="text" id="direccion" name="direccion" required><br>
 
-        <label for="correo">Correo:</label>
-        <input type="email" id="correo" name="correo" required><br><br>
+      <label for="correo">Correo:</label>
+      <input type="email" id="correo" name="correo" required><br>
 
-        <!-- Sección para agregar departamentos -->
-        <h2>Agregar Departamentos</h2>
-        <label for="nombre_departamento">Nombre del Departamento:</label>
-        <input type="text" id="nombre_departamento" name="nombre_departamento">
-        <button type="button" id="agregar-departamento-btn">Agregar Departamento</button><br><br>
+      <!-- Sección para agregar departamentos -->
+      <h2>Agregar Departamentos</h2>
+      <label for="nombre_departamento">Nombre del Departamento:</label>
+      <input type="text" id="nombre_departamento" name="nombre_departamento">
+      <button type="button" id="agregar-departamento-btn">Agregar Departamento</button><br>
 
-        <ul id="lista-departamentos"></ul>
+      <ul id="lista-departamentos"></ul> <br>
 
-        <button type="submit">Crear Empresa</button>
-    </form>
-
-    <script src="js/crear_empresa.js"></script>
+      <button type="submit">Crear Empresa</button>
+  </form>
+  <div id="footer">
+    <p class="copyright">Todos los derechos reservados 2024 Copyright &copy;</p>
+  </div>
 </body>
 </html>

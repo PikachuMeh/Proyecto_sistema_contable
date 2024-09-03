@@ -58,18 +58,18 @@ $(document).ready(function () {
             alert("El nombre del departamento no puede estar vacío.");
             return;
         }
-
+    
         if (/[^a-zA-Z\s]/.test(nombreDepartamento)) {
             alert("El nombre del departamento solo debe contener letras y espacios.");
             return;
         }
-
+    
         departamentos.push({ nombre_departamento: nombreDepartamento });
-
+    
         actualizarListaDepartamentos();
         $("#nombre_departamento").val("");
     });
-
+    
     // Función para actualizar la lista de departamentos
     function actualizarListaDepartamentos() {
         const lista = $("#lista-departamentos");
@@ -93,12 +93,12 @@ $(document).ready(function () {
 
     // Validación y envío del formulario para crear la empresa
     $("#crearEmpresaForm").submit(function (event) {
-        event.preventDefault();
-
+        event.preventDefault(); // Evitar el envío predeterminado del formulario
+    
         const tipoRif = $("#tipo_rif").val();
         const rifNumeros = $("#rif_numero").val();
         const rifCompleto = tipoRif + "-" + rifNumeros;
-
+    
         const empresaData = {
             nombre: $("#nombre").val(),
             fecha_constitucion: $("#fecha_constitucion").val(),
@@ -109,7 +109,9 @@ $(document).ready(function () {
             correo: $("#correo").val(),
             departamentos: departamentos
         };
-
+    
+        console.log(empresaData); // Agrega este log para revisar la estructura
+    
         $.ajax({
             url: 'http://localhost:9000/empresas/crear',
             method: 'POST',
@@ -117,20 +119,6 @@ $(document).ready(function () {
             data: JSON.stringify(empresaData),
             success: function (response) {
                 alert('Empresa y departamentos creados con éxito.');
-
-                // Iniciar el primer periodo contable para la nueva empresa
-                $.ajax({
-                    url: `http://localhost:9000/empresas/${response.empresa_id}/iniciar_periodo`,
-                    method: 'POST',
-                    success: function (response) {
-                        console.log('Periodo contable iniciado:', response);
-                    },
-                    error: function (error) {
-                        console.error('Error al iniciar el periodo contable:', error);
-                        alert('Hubo un problema al iniciar el periodo contable.');
-                    }
-                });
-
                 window.location.href = 'empresas.html';
             },
             error: function (error) {
@@ -139,4 +127,5 @@ $(document).ready(function () {
             }
         });
     });
+    
 });

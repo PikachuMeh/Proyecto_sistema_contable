@@ -1,0 +1,93 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Empresa</title>
+    <link type="text/css" rel="stylesheet" href="css/style.css">
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/generar_asientos.js"></script>
+</head>
+<body>
+    <div id="wrap">
+        <div id="header">
+          <h1>ASAP Company</h1>
+          <h2>Transparencia en tus Asientos contables</h2>
+          <div id="nav">
+            <ul id="nav-pages">
+                <li><a href="menu.html" class="current">Home</a><span>/</span></li>
+                <li><a href="empresas.html">Empresas</a><span>/</span></li>
+                <li><a href="asientos_contables.html">Asientos </a><span>/</span></li>
+                <li><a href="crear_plan.html">Crear Plan de Cuentas</a><span>/</span></li>
+                <li><a href="plan_cuentas.html">Plan de cuentas</a><span>/</span></li>
+                <li><a href="reportes.html">Reportes</a></li><span>/</span></li>
+            </ul>
+        </div>
+      </div>
+     <!-- Formulario para crear un nuevo asiento contable -->
+     <div>
+        <h2>Crear Nuevo Asiento Contable</h2>
+        <label for="num_asiento">Número de Asiento:</label>
+        <input type="number" id="num_asiento" name="num_asiento" min="1" required><br>
+
+        <label for="tipo_comprobante">Tipo de Comprobante:</label>
+        <select id="tipo_comprobante">
+            <!-- Los tipos de comprobantes serán llenados por JavaScript -->
+        </select><br>
+
+        <label for="fecha_asiento">Fecha del Asiento:</label>
+        <input type="date" id="fecha_asiento" name="fecha" max="" required><br>
+
+         <br> <label for="documento_respaldo">Documento Respaldo:</label> 
+        <input type="file" id="documento_respaldo" required><br>
+
+       <br> <button type="button" id="crear_asiento_btn">Crear Asiento</button>
+    </div>
+
+    <!-- Listado de asientos contables existentes -->
+    <div>
+        <h2>Asientos Contables Existentes</h2>
+        <ul id="lista_asientos_contables">
+            <!-- Los asientos contables serán llenados por JavaScript -->
+        </ul>
+    </div>
+
+    <!-- Detalles del asiento seleccionado -->
+    <div id="detalle_asiento" style="display:none;">
+        <h2>Detalle del Asiento Contable</h2>
+        <p id="detalle_num_asiento"></p>
+        <p id="detalle_tipo_comprobante"></p>
+        <p id="detalle_fecha_asiento"></p>
+
+        <h3>Cuentas Asociadas</h3>
+        <ul id="lista_cuentas">
+            <!-- Las cuentas asociadas se mostrarán aquí -->
+        </ul>
+
+        <h3>Agregar Cuentas al Asiento</h3>
+        <label for="cuenta_contable">Cuenta Contable:</label>
+        <select id="cuenta_contable">
+            <!-- Las cuentas contables serán llenadas por JavaScript -->
+        </select><br>
+
+        <label for="debe_haber">Debe / Haber:</label>
+        <select id="debe_haber">
+            <option value="Debe">Debe</option>
+            <option value="Haber">Haber</option>
+        </select><br>
+
+        <label for="monto">Monto:</label>
+        <input type="number" id="monto" required><br>
+
+        <button type="button" id="agregar_cuenta_btn">Agregar Cuenta</button>
+    </div>
+    
+      <!-- Botón para regresar a empresas.html -->
+     <div>
+        <button onclick="window.location.href='empresa.html';">Volver a Empresas</button>
+    </div>
+    <script src="js/crear_empresa.js"></script>
+    <div id="footer">
+        <p class="copyright">Todos los derechos reservados 2024 Copyright &copy;</p>
+      </div>
+</body>
+</html>

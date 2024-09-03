@@ -3,16 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <title>Detalle de Asiento Contable</title>
+    <link type="text/css" rel="stylesheet" href="css/style.css">
     <script src="js/jquery-3.7.1.min.js"></script>
     <script src="js/cuentas_asientos.js"></script>
 </head>
 <body>
-
-    <h1>Detalle de Asiento Contable</h1>
+    <div id="wrap">
+        <div id="header">
+          <h1>ASAP Company</h1>
+          <h2>Transparencia en tus Asientos contables</h2>
+          <div id="nav">
+            <ul id="nav-pages">
+                <li><a href="menu.html" class="current">Home</a><span>/</span></li>
+                <li><a href="empresas.html">Empresas</a><span>/</span></li>
+                <!--<li><a href="asientos_contables.html">Asientos </a><span>/</span></li>
+                <li><a href="crear_plan.html">Crear Plan de Cuentas</a><span>/</span></li>
+                <li><a href="plan_cuentas.html">Plan de cuentas</a><span>/</span></li>-->
+                <li><a href="reportes.html">Reportes</a></li><span>/</span></li>
+            </ul>
+        </div>
+      </div>
+    <h2>Detalle de Asiento Contable</h2>
 
     <!-- Detalle del asiento contable -->
     <div id="detalle_asiento">
-        <h2>Información del Asiento</h2>
+        <h4>Información del Asiento</h4>
         <p id="detalle_num_asiento"></p>
         <p id="detalle_tipo_comprobante"></p>
         <p id="detalle_fecha_asiento"></p>
@@ -49,6 +64,8 @@
 
     <!-- Botón para volver a la página de generación de asientos -->
     <button id="volver_btn">Volver a Generar Asientos</button>
-
+    <div id="footer">
+        <p class="copyright">Todos los derechos reservados 2024 Copyright &copy;</p>
+      </div>
 </body>
 </html>
