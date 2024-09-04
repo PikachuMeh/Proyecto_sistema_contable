@@ -71,7 +71,8 @@ def procesar_reporte(asientos_cerrados):
             "cuentas": []
         }
 
-        for cuenta_asiento in asiento.cuentas_contables_asientos:
+        # Asegúrate de usar el nombre correcto de la relación
+        for cuenta_asiento in asiento.cuentas:  # Aquí cambio "cuentas_contables_asientos" a "cuentas"
             info_asiento["cuentas"].append({
                 "descripcion_cuenta": cuenta_asiento.cuenta_contable.nombre_cuenta,
                 "debe": cuenta_asiento.saldo if cuenta_asiento.tipo_saldo == 'debe' else 0,
@@ -122,6 +123,12 @@ class CuentaContableSchema(BaseModel):
     tipo_asiento: str  # Tipo de asiento relacionado con tipo_cuenta
     documento_respaldo: str  # Documento de respaldo relacionado con tipo_cuenta
     
+# Modelos Pydantic
+class CuentaAsientoRequest(BaseModel):
+    cuentaId: int
+    tipo_saldo: str
+    saldo: float
+
 def determinar_nivel_tipo(codigo: str) -> str:
     # Determinar el tipo de cuenta según el primer dígito del código
     if codigo.startswith("1"):
@@ -177,6 +184,12 @@ class CuentaNueva(BaseModel):
 
 class DepartamentoResponse(BaseModel):
     nombre_departamento: str
+    id_departamento: int
+
+    
+class DepartamentoCrear(BaseModel):
+    nombre_departamento: str
+
 
 class EmpresaCreateRequest(BaseModel):
     nombre: str
@@ -186,7 +199,7 @@ class EmpresaCreateRequest(BaseModel):
     actividad_economica: str
     direccion: str
     correo: str
-    departamentos: List[DepartamentoResponse] = []
+    departamentos: List[DepartamentoCrear] = []
 
 class CuentaAsientoRequest(BaseModel):
     cuentaId: int
@@ -206,6 +219,20 @@ def get_db():
 @app.get("/")
 async def index():
     return "hola mundo!"
+
+@app.get("/empresas", response_model=List[EmpresaSchema])
+def obtener_empresas(db: Session = Depends(get_db)):
+    """
+    Endpoint para obtener todas las empresas.
+    """
+    try:
+        empresas = db.query(Empresas).all()
+        if not empresas:
+            raise HTTPException(status_code=404, detail="No se encontraron empresas")
+        return empresas
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener las empresas: {str(e)}")
+
 
 @app.post("/buscar-empresas", response_model=list[EmpresaSchema])
 def buscar_empresas(request: BuscarEmpresaRequest, db: Session = Depends(get_db)):
@@ -466,15 +493,97 @@ def get_tipos_comprobante(db: Session = Depends(get_db)):
     return db.query(TipoComprobante).all()
 
 @app.get("/asientos")
-def get_asientos(db: Session = Depends(get_db)):
+def get_asientos(empresa_id: int = None, asiento_id: int = None, db: Session = Depends(get_db)):
+    """
+    Endpoint para obtener los asientos contables. 
+    - Si se proporciona `asiento_id`, devolverá el asiento específico.
+    - Si se proporciona `empresa_id`, devolverá todos los asientos de la empresa.
+    """
     try:
-        print("Obteniendo asientos contables...")
-        asientos = db.query(AsientosContables).all()
-        print(f"Se encontraron {len(asientos)} asientos contables.")
-        return asientos
+        if asiento_id:
+            # Obtener un asiento específico
+            asiento = db.query(AsientosContables)\
+                .filter(AsientosContables.id_asiento_contable == asiento_id)\
+                .first()
+
+            if not asiento:
+                raise HTTPException(status_code=404, detail="Asiento no encontrado")
+
+            # Verificar el estado del cierre contable
+            cierre = db.query(CierreContable).filter_by(id_cierre_contable=asiento.cierre_contable).first()
+            estado_asiento = "Cerrado" if cierre and cierre.estado == "Cerrado" else "Abierto"
+
+            # Obtener las cuentas asociadas
+            cuentas_asiento = db.query(CuentasContablesAsientosContables)\
+                .filter_by(id_asiento_contable=asiento_id)\
+                .all()
+
+            cuentas_detalles = [{
+                "id": cuenta_asiento.id_cuenta_asiento,
+                "nombre_cuenta": cuenta_asiento.cuenta_contable.nombre_cuenta,
+                "tipo_saldo": cuenta_asiento.tipo_saldo,
+                "saldo": cuenta_asiento.saldo
+            } for cuenta_asiento in cuentas_asiento]
+
+            return {
+                "num_asiento": asiento.num_asiento,
+                "tipo_comprobante": asiento.tipo_comprobante,
+                "fecha": asiento.fecha,
+                "cuentas": cuentas_detalles,
+                "estado": estado_asiento
+            }
+
+        elif empresa_id:
+            # Obtener todos los asientos de una empresa
+            asientos = db.query(AsientosContables)\
+                         .filter(AsientosContables.id_empresas == empresa_id)\
+                         .all()
+
+            if not asientos:
+                raise HTTPException(status_code=404, detail="No se encontraron asientos para esta empresa.")
+
+            resultado = []
+            for asiento in asientos:
+                # Verificar el estado del cierre contable para cada asiento
+                cierre = db.query(CierreContable).filter_by(id_cierre_contable=asiento.cierre_contable).first()
+                estado_asiento = "Cerrado" if cierre and cierre.estado == "Cerrado" else "Abierto"
+
+                cuentas_asiento = db.query(CuentasContablesAsientosContables)\
+                    .filter_by(id_asiento_contable=asiento.id_asiento_contable)\
+                    .all()
+
+                cuentas_detalles = [{
+                    "id": cuenta_asiento.id_cuenta_asiento,
+                    "nombre_cuenta": cuenta_asiento.cuenta_contable.nombre_cuenta,
+                    "tipo_saldo": cuenta_asiento.tipo_saldo,
+                    "saldo": cuenta_asiento.saldo
+                } for cuenta_asiento in cuentas_asiento]
+
+                resultado.append({
+                    "num_asiento": asiento.num_asiento,
+                    "tipo_comprobante": asiento.tipo_comprobante,
+                    "fecha": asiento.fecha,
+                    "cuentas": cuentas_detalles,
+                    "estado": estado_asiento
+                })
+
+            return resultado
+
+        else:
+            raise HTTPException(status_code=400, detail="Debe proporcionar `empresa_id` o `asiento_id`")
+
     except Exception as e:
         print(f"Error al obtener los asientos: {str(e)}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+
+#Para los asientos en si
+@app.get("/asientos/{empresa_id}")
+def get_asientos_empresa(empresa_id: int, db: Session = Depends(get_db)):
+    asientos = db.query(AsientosContables).filter(AsientosContables.id_empresas == empresa_id).all()
+    if not asientos:
+        raise HTTPException(status_code=404, detail="No se encontraron asientos para esta empresa.")
+    return asientos
 
 @app.post("/asientos")
 def create_asiento(
@@ -495,29 +604,28 @@ def create_asiento(
         if existing_asiento:
             raise HTTPException(status_code=400, detail="El número de asiento ya existe para esta empresa.")
 
-        cierre_abierto = db.query(CierreContable).filter_by(estado='Abierto').first()
+        # Crear un nuevo cierre contable para este asiento
+        nuevo_cierre_contable = CierreContable(
+            estado='Abierto',
+            fecha_contable_apertura=date.today(),
+            fecha_contable_cierre="0000-00-00"  # Al estar abierto, le asignamos "0000-00-00"
+        )
+        db.add(nuevo_cierre_contable)
+        db.commit()
+        db.refresh(nuevo_cierre_contable)
 
-        if not cierre_abierto:
-            cierre_abierto = CierreContable(
-                estado='Abierto',
-                fecha_contable_apertura=date.today(),
-                fecha_contable_cierre='0000-00-00'
-            )
-            db.add(cierre_abierto)
-            db.commit()
-            db.refresh(cierre_abierto)
-
+        # Guardar el archivo de respaldo del asiento
         ruta_archivo = f"uploads/{documento_respaldo.filename}"
         with open(ruta_archivo, "wb") as buffer:
             buffer.write(documento_respaldo.file.read())
 
-        # Crear el asiento contable
+        # Crear el nuevo asiento contable vinculado al cierre contable
         nuevo_asiento = AsientosContables(
             num_asiento=num_asiento,
             tipo_comprobante=tipo_comprobante,
             fecha=fecha,
             documento_respaldo="",
-            cierre_contable=cierre_abierto.id_cierre_contable,
+            cierre_contable=nuevo_cierre_contable.id_cierre_contable,  # Asignar el id del cierre contable recién creado
             id_empresas=empresa_id
         )
         db.add(nuevo_asiento)
@@ -525,14 +633,11 @@ def create_asiento(
         db.refresh(nuevo_asiento)
 
         # Crear el comprobante asociado
-        nuevo_nombre_archivo = f"Comprobante_para_asiento_contable_{nuevo_asiento.num_asiento}.xlsx"
-        ruta_archivo_comprobante = f"uploads/{nuevo_nombre_archivo}"
-
         nuevo_comprobante = Comprobantes(
             titulo=f"Comprobante para el asiento contable {nuevo_asiento.num_asiento}",
             descripcion="Descripción del comprobante generado automáticamente.",
             fecha=date.today(),
-            archivo=ruta_archivo_comprobante,
+            archivo=ruta_archivo,
             tipo_comprobante=tipo_comprobante
         )
         db.add(nuevo_comprobante)
@@ -543,7 +648,7 @@ def create_asiento(
         nuevo_asiento.documento_respaldo = nuevo_comprobante.id_comprobante
         db.commit()
 
-        return nuevo_asiento
+        return {"mensaje": "Asiento creado con éxito", "asiento": nuevo_asiento}
 
     except HTTPException as he:
         db.rollback()
@@ -551,47 +656,48 @@ def create_asiento(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
     
-    
-@app.get("/asientos/{asiento_id}")
-def get_asiento(asiento_id: int, db: Session = Depends(get_db)):
-    asiento = db.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
+# Obtener todos los asientos de una empresa
+@app.get("/asientos/empresa/{empresa_id}")
+def get_asientos_por_empresa(empresa_id: int, db: Session = Depends(get_db)):
+    asientos = db.query(AsientosContables)\
+                 .options(joinedload(AsientosContables.cuentas))\
+                 .filter(AsientosContables.id_empresas == empresa_id).all()
 
-    if not asiento:
-        raise HTTPException(status_code=404, detail="Asiento no encontrado")
+    if not asientos:
+        raise HTTPException(status_code=404, detail="No se encontraron asientos para esta empresa.")
 
-    # Verificar si el asiento está asociado a un cierre contable cerrado
-    cierre = db.query(CierreContable).filter(CierreContable.id_cierre_contable == asiento.cierre_contable).first()
-    estado_asiento = "Abierto"
-    if cierre and cierre.estado == 'Cerrado':
-        estado_asiento = "Cerrado"
+    resultado = []
+    for asiento in asientos:
+        # Verificar si el asiento está cerrado
+        cierre = db.query(CierreContable).filter(CierreContable.id_cierre_contable == asiento.cierre_contable).first()
+        estado_asiento = "Abierto"
+        if cierre and cierre.estado == 'Cerrado':
+            estado_asiento = "Cerrado"
 
-    # Obtener el comprobante a partir de la relación correcta en lugar de documento_respaldo
-    comprobante = db.query(Comprobantes).filter_by(id_comprobante=asiento.documento_respaldo).first()
-    tipo_comprobante = "Desconocido"
-    if comprobante:
-        if comprobante.tipo_comprobante:
-            tipo_comprobante_obj = db.query(TipoComprobante).filter_by(id_tipo_comprobante=comprobante.tipo_comprobante).first()
-            if tipo_comprobante_obj:
-                tipo_comprobante = tipo_comprobante_obj.nombre_comprobante
+        # Obtener las cuentas asociadas al asiento desde la tabla intermediaria
+        cuentas_asiento = db.query(CuentasContablesAsientosContables).filter_by(id_asiento_contable=asiento.id_asiento_contable).all()
 
-    cuentas_asiento = db.query(CuentasContablesAsientosContables).filter_by(id_asiento_contable=asiento_id).all()
-    cuentas = [
-        {
-            "nombre_cuenta": cuenta.cuenta_contable.nombre_cuenta,
-            "tipo_saldo": cuenta.tipo_saldo,
-            "saldo": cuenta.saldo
-        }
-        for cuenta in cuentas_asiento
-    ]
+        cuentas_detalles = []
+        for cuenta_asiento in cuentas_asiento:
+            cuenta_contable = db.query(CuentasContables).filter_by(id_cuenta_contable=cuenta_asiento.id_cuenta_contable).first()
+            cuentas_detalles.append({
+                "id": cuenta_asiento.id_cuenta_asiento,
+                "nombre_cuenta": cuenta_contable.nombre_cuenta,
+                "tipo_saldo": cuenta_asiento.tipo_saldo,
+                "saldo": cuenta_asiento.saldo
+            })
 
-    return {
-        "num_asiento": asiento.num_asiento,
-        "tipo_comprobante": tipo_comprobante,
-        "fecha": asiento.fecha,
-        "cuentas": cuentas,
-        "estado": estado_asiento
-    }
+        resultado.append({
+            "num_asiento": asiento.num_asiento,
+            "tipo_comprobante": asiento.tipo_comprobante,
+            "fecha": asiento.fecha,
+            "cuentas": cuentas_detalles,
+            "estado": estado_asiento
+        })
+
+    return resultado
 
 
 @app.put("/asientos/{asiento_id}")
@@ -628,12 +734,14 @@ def cerrar_cierre_contable(cierre_id: int, db: Session = Depends(get_db)):
     
     return {"mensaje": "Cierre contable cerrado con éxito."}
 
+# Agregar una cuenta a un asiento contable existente
 @app.post("/asientos/{asiento_id}/cuentas")
 def add_cuenta_to_asiento(asiento_id: int, cuenta: CuentaAsientoRequest, db: Session = Depends(get_db)):
     asiento = db.query(AsientosContables).filter(AsientosContables.id_asiento_contable == asiento_id).first()
     if not asiento:
         raise HTTPException(status_code=404, detail="Asiento no encontrado")
 
+    # Agregar la cuenta al asiento contable
     cuenta_asiento = CuentasContablesAsientosContables(
         id_asiento_contable=asiento_id,
         id_cuenta_contable=cuenta.cuentaId,
@@ -642,9 +750,8 @@ def add_cuenta_to_asiento(asiento_id: int, cuenta: CuentaAsientoRequest, db: Ses
     )
     db.add(cuenta_asiento)
     db.commit()
-    db.refresh(asiento)
 
-    return asiento
+    return {"mensaje": "Cuenta agregada con éxito al asiento", "cuenta": cuenta_asiento}
 
 
 @app.get("/empresas/{empresa_id}/cuentas_no_principales")
@@ -686,40 +793,71 @@ def verificar_numero_asiento(empresa_id: int, num_asiento: int, db: Session = De
     else:
         return {"exists": False}
 
+@app.delete("/asientos/{asiento_id}/cuentas/{cuenta_asiento_id}")
+def eliminar_cuenta_asiento(asiento_id: int, cuenta_asiento_id: int, db: Session = Depends(get_db)):
+    # Obtener la cuenta contable asociada al asiento
+    cuenta_asiento = db.query(CuentasContablesAsientosContables).filter_by(id_cuenta_asiento=cuenta_asiento_id, id_asiento_contable=asiento_id).first()
+
+    if not cuenta_asiento:
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada o no pertenece al asiento.")
+
+    # Eliminar la cuenta del asiento
+    db.delete(cuenta_asiento)
+    db.commit()
+
+    return {"mensaje": "Cuenta eliminada del asiento correctamente."}
 
 @app.post("/asientos/{asiento_id}/cerrar")
 def cerrar_asiento(asiento_id: int, db: Session = Depends(get_db)):
-    asiento = db.query(AsientosContables).filter(AsientosContables.id_asiento_contable == asiento_id).first()
+    """
+    Endpoint para cerrar un asiento contable.
+    """
+    try:
+        # Obtener el asiento contable
+        asiento = db.query(AsientosContables).filter_by(id_asiento_contable=asiento_id).first()
 
-    if not asiento:
-        raise HTTPException(status_code=404, detail="Asiento no encontrado")
+        if not asiento:
+            raise HTTPException(status_code=404, detail="Asiento no encontrado")
 
-    # Verificar si el asiento ya está asociado a un cierre contable cerrado
-    cierre = db.query(CierreContable).filter(CierreContable.id_cierre_contable == asiento.cierre_contable).first()
-    if cierre and cierre.estado == 'Cerrado':
-        raise HTTPException(status_code=400, detail="El asiento ya está cerrado.")
+        # Obtener el cierre contable relacionado con el asiento
+        cierre = db.query(CierreContable).filter_by(id_cierre_contable=asiento.cierre_contable).first()
 
-    # Obtener todas las cuentas asociadas al asiento
-    cuentas_asiento = db.query(CuentasContablesAsientosContables).filter_by(id_asiento_contable=asiento_id).all()
+        if not cierre:
+            raise HTTPException(status_code=404, detail="Cierre contable no encontrado")
 
-    # Calcular los totales de debe y haber
-    total_debe = sum(cuenta.saldo for cuenta in cuentas_asiento if cuenta.tipo_saldo == 'debe')
-    total_haber = sum(cuenta.saldo for cuenta in cuentas_asiento if cuenta.tipo_saldo == 'haber')
+        if cierre.estado == 'Cerrado':
+            raise HTTPException(status_code=400, detail="El asiento ya está cerrado")
 
-    # Validar si el asiento cuadra
-    if total_debe != total_haber:
-        raise HTTPException(status_code=400, detail="El asiento no cuadra. El debe y el haber deben ser iguales antes de cerrar el asiento.")
+        # Validación: Verificar que el asiento contable esté balanceado (Debe = Haber)
+        cuentas_asiento = db.query(CuentasContablesAsientosContables).filter_by(id_asiento_contable=asiento_id).all()
 
-    # Marcar el cierre contable como cerrado
-    cierre.estado = 'Cerrado'
-    cierre.fecha_contable_cierre = date.today()
-    db.commit()
+        total_debe = 0
+        total_haber = 0
 
-    # Devuelve el asiento actualizado incluyendo su estado
-    return {
-        "mensaje": "Asiento cerrado correctamente",
-        "estado": "Cerrado"
-    }
+        for cuenta in cuentas_asiento:
+            if cuenta.tipo_saldo.lower() == "debe":
+                total_debe += cuenta.saldo
+            elif cuenta.tipo_saldo.lower() == "haber":
+                total_haber += cuenta.saldo
+
+        if total_debe != total_haber:
+            raise HTTPException(status_code=400, detail=f"El asiento no cuadra: Debe ({total_debe}) y Haber ({total_haber}) no son iguales.")
+
+        # Si el asiento está balanceado, proceder a cerrar
+        cierre.estado = 'Cerrado'
+        cierre.fecha_contable_cierre = date.today()  # Cambiamos la fecha de cierre al día actual
+
+        db.commit()
+
+        return {"mensaje": "Asiento cerrado con éxito"}
+
+    except HTTPException as he:
+        db.rollback()
+        raise he
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al cerrar el asiento: {str(e)}")
+
 
 @app.post("/comprobantes/crear")
 def crear_comprobante(asiento_id: int, archivo: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -822,14 +960,20 @@ def cerrar_periodo_contable(empresa_id: int, numero_periodo: int, db: Session = 
 @app.post("/reportes/{tipo_reporte}")
 def generar_reporte(tipo_reporte: str, request: dict, db: Session = Depends(get_db)):
     fecha_reporte = request.get('fecha')
+    empresa_id = request.get('empresa_id')  # Obtener el ID de la empresa seleccionada
+
     if not fecha_reporte:
         raise HTTPException(status_code=400, detail="Fecha no proporcionada")
+
+    if not empresa_id:
+        raise HTTPException(status_code=400, detail="Empresa no proporcionada")
 
     asientos_cerrados = []
     if tipo_reporte == 'diario':
         asientos_cerrados = db.query(AsientosContables).join(CierreContable).filter(
             CierreContable.estado == 'Cerrado',
-            AsientosContables.fecha == fecha_reporte
+            AsientosContables.fecha == fecha_reporte,
+            AsientosContables.id_empresas == empresa_id  # Filtrar por empresa
         ).all()
 
     elif tipo_reporte == 'mensual':
@@ -837,7 +981,8 @@ def generar_reporte(tipo_reporte: str, request: dict, db: Session = Depends(get_
         mes_fin = f"{fecha_reporte}-31"
 
         asientos = db.query(AsientosContables).filter(
-            AsientosContables.fecha.between(mes_inicio, mes_fin)
+            AsientosContables.fecha.between(mes_inicio, mes_fin),
+            AsientosContables.id_empresas == empresa_id  # Filtrar por empresa
         ).all()
 
         for asiento in asientos:
@@ -854,12 +999,12 @@ def generar_reporte(tipo_reporte: str, request: dict, db: Session = Depends(get_
     reporte = procesar_reporte(asientos_cerrados)
     return reporte
 
-
 @app.post("/reportes/diario")
-def generar_reporte_diario(fecha: str, db: Session = Depends(get_db)):
+def generar_reporte_diario(fecha: str, empresa_id: int, db: Session = Depends(get_db)):
     asientos_cerrados = db.query(AsientosContables).join(CierreContable).filter(
         CierreContable.estado == 'Cerrado',
-        AsientosContables.fecha == fecha
+        AsientosContables.fecha == fecha,
+        AsientosContables.id_empresas == empresa_id  # Filtrar por empresa
     ).all()
 
     if not asientos_cerrados:
@@ -869,12 +1014,13 @@ def generar_reporte_diario(fecha: str, db: Session = Depends(get_db)):
     return reporte
 
 @app.post("/reportes/mensual")
-def generar_reporte_mensual(mes: str, db: Session = Depends(get_db)):
+def generar_reporte_mensual(mes: str, empresa_id: int, db: Session = Depends(get_db)):
     mes_inicio = f"{mes}-01"
     mes_fin = f"{mes}-31"
 
     asientos = db.query(AsientosContables).filter(
-        AsientosContables.fecha.between(mes_inicio, mes_fin)
+        AsientosContables.fecha.between(mes_inicio, mes_fin),
+        AsientosContables.id_empresas == empresa_id  # Filtrar por empresa
     ).all()
 
     # Verificar que todos los asientos del mes estén cerrados
@@ -883,6 +1029,5 @@ def generar_reporte_mensual(mes: str, db: Session = Depends(get_db)):
         if not cierre or cierre.estado != 'Cerrado':
             raise HTTPException(status_code=400, detail="No se puede generar el reporte mensual porque uno o más asientos no están cerrados.")
 
-    # Si todos los asientos están cerrados, generar el reporte
     reporte = procesar_reporte(asientos)
     return reporte

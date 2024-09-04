@@ -1,4 +1,7 @@
 $(document).ready(function () {
+    // Cargar las empresas al cargar la página
+    cargarEmpresas();
+
     // Mostrar u ocultar los campos según el tipo de reporte seleccionado
     $('#tipo_reporte').change(function () {
         const tipoReporte = $(this).val();
@@ -14,12 +17,18 @@ $(document).ready(function () {
     // Manejar la generación del reporte
     $('#generar_reporte_btn').click(function () {
         const tipoReporte = $('#tipo_reporte').val();
+        const empresaId = $('#empresa_reporte').val();
         let fecha = null;
 
         if (tipoReporte === 'diario') {
             fecha = $('#fecha_reporte').val();
         } else if (tipoReporte === 'mensual') {
             fecha = $('#mes_reporte').val();
+        }
+
+        if (!empresaId) {
+            alert("Por favor, seleccione una empresa.");
+            return;
         }
 
         if (!fecha) {
@@ -31,7 +40,7 @@ $(document).ready(function () {
             url: `http://localhost:9000/reportes/${tipoReporte}`,
             method: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ fecha: fecha }),
+            data: JSON.stringify({ fecha: fecha, empresa_id: empresaId }),
             success: function (response) {
                 mostrarReporte(response);
             },
@@ -62,7 +71,7 @@ $(document).ready(function () {
                 reporteHTML += '<ul>';
                 let totalDebe = 0;
                 let totalHaber = 0;
-                
+
                 asiento.cuentas.forEach(cuenta => {
                     reporteHTML += `<li>${cuenta.descripcion_cuenta}: Debe ${cuenta.debe}, Haber ${cuenta.haber}</li>`;
                     totalDebe += cuenta.debe;
@@ -76,6 +85,25 @@ $(document).ready(function () {
 
             $('#resultado_reporte').append(reporteHTML);
         }
+    }
+
+    // Función para cargar las empresas en el select
+    function cargarEmpresas() {
+        $.ajax({
+            url: 'http://localhost:9000/empresas',
+            method: 'GET',
+            success: function (response) {
+                const empresaSelect = $('#empresa_reporte');
+                empresaSelect.empty();
+                response.forEach(empresa => {
+                    empresaSelect.append(new Option(empresa.nombre, empresa.id_empresas));
+                });
+            },
+            error: function (error) {
+                console.error('Error al cargar las empresas:', error);
+                alert('Hubo un problema al cargar las empresas.');
+            }
+        });
     }
 
     // Botón para volver al menú principal

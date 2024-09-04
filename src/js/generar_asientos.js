@@ -1,10 +1,13 @@
 $(document).ready(function () {
-    cargarTiposDeComprobante();
-    cargarAsientosContables();
+    // Establecer la fecha máxima en el campo de fecha al día de hoy
+    const today = new Date().toISOString().split('T')[0];
+    $('#fecha_asiento').attr('max', today);
 
     let empresaSeleccionada = JSON.parse(localStorage.getItem('empresaSeleccionada'));
     let empresaId = empresaSeleccionada ? empresaSeleccionada.id : null;
-
+    cargarTiposDeComprobante();
+    cargarAsientosContables(empresaId);
+    
     if (!empresaId) {
         alert("No se ha seleccionado ninguna empresa.");
         return;
@@ -23,8 +26,7 @@ $(document).ready(function () {
             return;
         }
 
-        const today = new Date().toISOString().split('T')[0];
-        $('#fecha_asiento').attr('max', today);
+        // Validar que la fecha del asiento no sea posterior al día de hoy
         if (fechaAsiento > today) {
             alert('La fecha del asiento no puede ser posterior al día de hoy.');
             return;
@@ -43,7 +45,7 @@ $(document).ready(function () {
                     formData.append('fecha', fechaAsiento);
                     formData.append('documento_respaldo', documentoRespaldo);
                     formData.append('empresa_id', empresaId);
-
+                    
                     $.ajax({
                         url: 'http://localhost:9000/asientos',
                         method: 'POST',
@@ -52,7 +54,7 @@ $(document).ready(function () {
                         processData: false,
                         success: function (response) {
                             alert('Asiento creado con éxito');
-                            cargarAsientosContables();
+                            cargarAsientosContables(empresaId);
                         },
                         error: function (error) {
                             console.error('Error al crear el asiento:', error);
@@ -102,12 +104,15 @@ $(document).ready(function () {
     });
     $('#lista_asientos_contables').on('click', '.ver-asiento-btn', function () {
         const asientoId = $(this).data('id');
-    
+        
         if (!asientoId) {
             alert("Selecciona un asiento contable.");
             return;
         }
-    
+        
+        // Guardar el ID del asiento seleccionado en localStorage
+        localStorage.setItem('asientoSeleccionado', asientoId);
+        
         // Redirigir a la página de detalle del asiento
         window.location.href = `cuentas_asientos.html?asiento_id=${asientoId}`;
     });
@@ -130,9 +135,9 @@ $(document).ready(function () {
         });
     }
 
-    function cargarAsientosContables() {
+    function cargarAsientosContables(empresaId) {
         $.ajax({
-            url: 'http://localhost:9000/asientos',
+            url: `http://localhost:9000/asientos/${empresaId}`,
             method: 'GET',
             success: function (response) {
                 const listaAsientos = $('#lista_asientos_contables');
@@ -148,10 +153,12 @@ $(document).ready(function () {
                 });
             },
             error: function (error) {
+                alert(error['responseJSON']['detail'])
                 console.error('Error al cargar los asientos contables:', error);
             }
         });
     }
+    
 
     function mostrarDetalleAsiento(asiento) {
         $('#detalle_num_asiento').text(`Número de Asiento: ${asiento.num_asiento}`);

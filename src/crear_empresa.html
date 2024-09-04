@@ -18,9 +18,9 @@
       <ul id="nav-pages">
         <li><a href="menu.html" class="current">Home</a><span>/</span></li>
         <li><a href="empresas.html">Empresas</a><span>/</span></li>
-        <li><a href="asientos_contables.html">Asientos </a><span>/</span></li>
+        <!--<li><a href="asientos_contables.html">Asientos </a><span>/</span></li>
         <li><a href="crear_plan.html">Crear Plan de Cuentas</a><span>/</span></li>
-        <li><a href="plan_cuentas.html">Plan de cuentas</a><span>/</span></li>
+        <li><a href="plan_cuentas.html">Plan de cuentas</a><span>/</span></li>-->
         <li><a href="reportes.html">Reportes</a></li><span>/</span></li>
       </ul>
     </div>
@@ -42,27 +42,28 @@
       <label for="fecha_constitucion">Fecha de Constitución:</label>
       <input type="date" id="fecha_constitucion" name="fecha_constitucion" required> <br>
 
-      <label for="tipo_rif">Tipo de RIF:</label>
+      <label for="tipo_rif">Tipo de Documento:</label>
       <select id="tipo_rif" name="tipo_rif" required>
           <option value="J">J</option>
           <option value="G">G</option>
           <option value="V">V</option>
           <option value="E">E</option>
+          <option value="C">C</option>
       </select>
-      <label for="rif_numero"> <br> Número de RIF:</label>
+      <label for="rif_numero"> <br> Número de Documento:</label>
       <input type="text" id="rif_numero" name="rif_numero" required><br>
 
       <label for="fecha_ejercicio_economico">Fecha de Ejercicio Económico:</label>
       <input type="date" id="fecha_ejercicio_economico" name="fecha_ejercicio_economico" required><br>
 
       <label for="actividad_economica">Actividad Económica:</label>
-      <input type="text" id="actividad_economica" name="actividad_economica" required><br>
+      <textarea type="text" id="actividad_economica" name="actividad_economica" required></textarea><br>
 
       <label for="direccion">Dirección:</label>
       <input type="text" id="direccion" name="direccion" required><br>
 
       <label for="correo">Correo:</label>
-      <input type="email" id="correo" name="correo" required><br>
+      <input type="email" id="correo" name="correo" required><br> 
 
       <!-- Sección para agregar departamentos -->
       <h2>Agregar Departamentos</h2>

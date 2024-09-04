@@ -1,8 +1,8 @@
 from ..base import engine, Base  # Importa Base desde base.py
-import datetime
-from sqlalchemy import (Double, Table, Column, Integer, String, Text, Float, CHAR, Boolean, Date, Time, TIMESTAMP, ForeignKey, Uuid, BigInteger,VARCHAR)
+from sqlalchemy import (Column, Integer, Text, Float, VARCHAR, Date, ForeignKey, String)
 from sqlalchemy.orm import relationship, backref
 
+# Modelo de Asientos Contables
 class AsientosContables(Base):
     __tablename__ = 'asientos_contables'
 
@@ -16,15 +16,18 @@ class AsientosContables(Base):
     id_cuentas_principales = Column(Integer, ForeignKey('cuentas_principales.id_cuentas_principales'), nullable=True)
     periodo_contable_id = Column(Integer, ForeignKey('periodos_contables.id_periodo_contable'), nullable=True)
 
-    # Relación con otras tablas
+    # Relaciones
     empresa = relationship("Empresas", back_populates="asientos_contables")
     cierre = relationship("CierreContable", back_populates="asientos_contables")
     comprobante = relationship("TipoComprobante", back_populates="asientos")
     cuentas_principales = relationship("CuentasPrincipales", back_populates="asientos_contables")
     cuentas = relationship("CuentasContablesAsientosContables", back_populates="asiento_contable")
-    reportes = relationship("Reportes", back_populates="asiento_contable")  # Agrega esta relación
-    cuentas_contables_asientos = relationship("CuentasContablesAsientosContables", back_populates="asiento_contable")
+    reportes = relationship("Reportes", back_populates="asiento_contable")
+    periodo_contable = relationship("PeriodosContables", back_populates="asientos_contables")  # Relación añadida correctamente
 
+
+
+# Modelo de Bitacora
 class Bitacora(Base):
     __tablename__ = 'bitacora'
 
@@ -36,6 +39,7 @@ class Bitacora(Base):
     usuario = relationship("Usuarios", back_populates="bitacora")
 
 
+# Modelo de Cierre Contable
 class CierreContable(Base):
     __tablename__ = 'cierre_contable'
 
@@ -47,6 +51,7 @@ class CierreContable(Base):
     asientos_contables = relationship("AsientosContables", back_populates="cierre")
 
 
+# Modelo de Comprobantes
 class Comprobantes(Base):
     __tablename__ = 'comprobantes'
     
@@ -60,6 +65,7 @@ class Comprobantes(Base):
     tipo = relationship("TipoComprobante", back_populates="comprobantes")
 
 
+# Modelo de Cuentas Contables
 class CuentasContables(Base):
     __tablename__ = 'cuentas_contables'
 
@@ -76,6 +82,8 @@ class CuentasContables(Base):
     cuentas_principales = relationship("CuentasPrincipales", back_populates="cuenta_contable")
     cuentas_asientos = relationship("CuentasContablesAsientosContables", back_populates="cuenta_contable")
 
+
+# Modelo de Cuentas Contables Asientos Contables (relación N a N entre cuentas y asientos)
 class CuentasContablesAsientosContables(Base):
     __tablename__ = "cuentas_contables_asientos_contables"
 
@@ -85,9 +93,11 @@ class CuentasContablesAsientosContables(Base):
     tipo_saldo = Column(String)  # "debe" o "haber"
     saldo = Column(Float)
 
-    asiento_contable = relationship("AsientosContables", back_populates="cuentas_contables_asientos")
+    asiento_contable = relationship("AsientosContables", back_populates="cuentas")
     cuenta_contable = relationship("CuentasContables", back_populates="cuentas_asientos")
 
+
+# Modelo de Cuentas Principales
 class CuentasPrincipales(Base):
     __tablename__ = 'cuentas_principales'
 
@@ -102,6 +112,7 @@ class CuentasPrincipales(Base):
     asientos_contables = relationship("AsientosContables", back_populates="cuentas_principales")
 
 
+# Modelo de Departamentos
 class Departamentos(Base):
     __tablename__ = 'departamentos'
 
@@ -113,6 +124,7 @@ class Departamentos(Base):
     registros_movimientos = relationship("RegistrosMovimientos", back_populates="departamento")
 
 
+# Modelo de Empresas
 class Empresas(Base):
     __tablename__ = 'empresas'
 
@@ -132,6 +144,7 @@ class Empresas(Base):
     periodos_contables = relationship("PeriodosContables", back_populates="empresa")
 
 
+# Modelo de Movimientos Plan
 class MovimientosPlan(Base):
     __tablename__ = 'movimientos_plan'
 
@@ -143,6 +156,7 @@ class MovimientosPlan(Base):
     registro = relationship("RegistrosMovimientos", back_populates="movimientos_plan")
 
 
+# Modelo de Movimientos Usuarios
 class MovimientosUsuarios(Base):
     __tablename__ = 'movimientos_usuarios'
 
@@ -153,6 +167,8 @@ class MovimientosUsuarios(Base):
     usuario = relationship("Usuarios", back_populates="movimientos_usuarios")
     registro = relationship("RegistrosMovimientos", back_populates="movimientos_usuarios")
 
+
+# Modelo de Periodos Contables
 class PeriodosContables(Base):
     __tablename__ = 'periodos_contables'
 
@@ -164,13 +180,10 @@ class PeriodosContables(Base):
     estado = Column(String, nullable=False)
 
     empresa = relationship("Empresas", back_populates="periodos_contables")
-    asientos_contables = relationship(
-        "AsientosContables",
-        primaryjoin="and_(PeriodosContables.id_periodo_contable == AsientosContables.periodo_contable_id)",
-        backref=backref("periodo_contable", uselist=False)
-    )
+    asientos_contables = relationship("AsientosContables", back_populates="periodo_contable")  # Relación con AsientosContables
 
 
+# Modelo de Plan Cuentas
 class PlanCuentas(Base):
     __tablename__ = 'plan_cuentas'
 
@@ -184,6 +197,7 @@ class PlanCuentas(Base):
     movimientos_plan = relationship("MovimientosPlan", back_populates="plan_cuentas")
 
 
+# Modelo de Registros Movimientos
 class RegistrosMovimientos(Base):
     __tablename__ = 'registros_movimientos'
 
@@ -200,6 +214,7 @@ class RegistrosMovimientos(Base):
     movimientos_usuarios = relationship("MovimientosUsuarios", back_populates="registro")
 
 
+# Modelo de Reportes
 class Reportes(Base):
     __tablename__ = 'reportes'
 
@@ -215,6 +230,7 @@ class Reportes(Base):
     asiento_contable = relationship("AsientosContables", back_populates="reportes")
 
 
+# Modelo de Tipo Comprobante
 class TipoComprobante(Base):
     __tablename__ = 'tipo_comprobante'
     
@@ -225,6 +241,7 @@ class TipoComprobante(Base):
     asientos = relationship("AsientosContables", back_populates="comprobante")
 
 
+# Modelo de Usuarios
 class Usuarios(Base):
     __tablename__ = 'usuarios'
 

@@ -1,11 +1,19 @@
 $(document).ready(function () {
     const departamentos = [];
 
-    // Configurar límites de fechas
-    const currentYear = new Date().getFullYear();
-    const maxDate = `${currentYear}-08-31`; // Máximo hasta agosto del año actual
-    const minDate = "1930-01-01"; // Mínimo desde 1930
+    const today = new Date();
 
+    // Obtener el año actual, mes y día
+    const maxYear = today.getFullYear();
+    const maxMonth = String(today.getMonth() + 1).padStart(2, '0'); // Los meses en JavaScript van de 0 a 11
+    const maxDay = String(today.getDate()).padStart(2, '0');
+    const maxDate = `${maxYear}-${maxMonth}-${maxDay}`; // Fecha máxima es el día de hoy
+
+    // Obtener la fecha de hace 100 años
+    const minYear = maxYear - 100;
+    const minDate = `${minYear}-${maxMonth}-${maxDay}`; // Fecha mínima es hace 100 años
+
+    // Aplicar las validaciones de fecha
     $("#fecha_constitucion").attr("max", maxDate).attr("min", minDate);
     $("#fecha_ejercicio_economico").attr("max", maxDate);
 

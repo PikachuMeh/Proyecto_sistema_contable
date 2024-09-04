@@ -1,17 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Sistema Contable| Contact</title>
+<title>Sistema Contable | Reportes</title>
 <meta charset="utf-8">
 <link type="text/css" rel="stylesheet" href="css/style.css">
 <script src="js/jquery-3.7.1.min.js"></script>
 <script src="js/reportes.js"></script>
-<!--[if IE 6]>
-<script src="js/ie6-transparency.js"></script>
-<script>DD_belatedPNG.fix('#contact-page #contact-form .submit');</script>
-<link type="text/css" rel="stylesheet" href="styles/ie6.css">
-<![endif]-->
-<!--[if IE 7]><link type="text/css" rel="stylesheet" href="styles/ie7.css"><![endif]-->
 </head>
 <body>
 <div id="wrap">
@@ -22,28 +16,23 @@
       <ul id="nav-pages">
         <li><a href="menu.html" class="current">Home</a><span>/</span></li>
         <li><a href="empresas.html">Empresas</a><span>/</span></li>
-        <!--<li><a href="asientos_contables.html">Asientos </a><span>/</span></li>
-        <li><a href="crear_plan.html">Crear Plan de Cuentas</a><span>/</span></li>
-        <li><a href="plan_cuentas.html">Plan de cuentas</a><span>/</span></li>-->
         <li><a href="reportes.html">Reportes</a></li><span>/</span></li>
       </ul>
     </div>
   </div>
-</fieldset>
-</form>
-</div>
-<div id="sidebar-contact">
-<h3>Sabias que?</h3>
-<p> Los contadores del FBI jugaron un papel muy importante en la caída de Al Capone
 
-  Los delitos financieros siempre dejan huella. Casi siempre se capturan en los registros contables en algún lugar gracias a la contabilidad por partida doble. La investigación contable forense de dos años fue realizada por el Departamento del Tesoro de los EE. UU. y dirigida por el agente especial (y contador) Frank Wilson, lo que finalmente llevó a que Al Capone fuera arrestado gracias a los Reportes.</p>
-</div>
-</div>
   <h2>Generar Reportes</h2>
 
-  <!-- Formulario para seleccionar el tipo de reporte -->
+  <!-- Formulario para seleccionar la empresa, tipo de reporte y fecha/mes -->
   <div id="seleccion_reporte">
       <h5>Ingrese Datos</h5>
+      
+      <!-- Selección de la empresa -->
+      <label for="empresa_reporte">Seleccione la Empresa:</label>
+      <select id="empresa_reporte">
+          <!-- Opciones se llenarán dinámicamente con el JavaScript -->
+      </select><br>
+
       <label for="tipo_reporte">Tipo de Reporte:</label>
       <select id="tipo_reporte">
           <option value="diario">Diario</option>
@@ -71,16 +60,12 @@
   </div>
 
   <!-- Botón para volver al menú principal -->
- <br><br><br><br><br><br> <button onclick="window.location.href='menu.html';">Volver al menu principal</button>
-</body>
-    
+  <br><br><br><br><br><br> 
+  <button onclick="window.location.href='menu.html';">Volver al menú principal</button>
+
   <div id="footer">
     <p class="copyright">Todos los derechos reservados 2024 Copyright &copy;</p>
   </div>
-</div>
-<div class="cache-images"> <img src="images/submit-button-blue-hover.png" width="0" height="0" alt=""> </div>
-<div id="footer">
-  <p class="copyright">Todos los derechos reservados 2024 Copyright &copy;</p>
 </div>
 </body>
 </html>
