@@ -63,27 +63,31 @@ $(document).ready(function () {
     });
     // Función para llenar los detalles de un asiento específico
     function llenarDetalleAsiento(asiento) {
-        console.log(asiento);
         $('#detalle_num_asiento').text(`Número de Asiento: ${asiento.num_asiento || 'N/A'}`);
         $('#detalle_tipo_comprobante').text(`Tipo de Comprobante: ${asiento.tipo_comprobante || 'N/A'}`);
         $('#detalle_fecha_asiento').text(`Fecha del Asiento: ${asiento.fecha || 'N/A'}`);
         $('#estado_asiento').text(`Estado del Asiento: ${asiento.estado || 'N/A'}`);
-    
+        
         const listaCuentas = $('#lista_cuentas');
         listaCuentas.empty();  // Limpiar lista previa
-    
+        
         if (asiento.cuentas && asiento.cuentas.length > 0) {
             asiento.cuentas.forEach(cuenta => {
                 const listItem = $(`
                     <li id="${cuenta.id}">
                         ${cuenta.nombre_cuenta} - ${cuenta.tipo_saldo.toUpperCase()} - ${cuenta.saldo}
-                        <button class="eliminar-cuenta-btn" data-id="${cuenta.id}">Eliminar</button>
+                        ${asiento.estado !== 'Cerrado' ? `<button class="eliminar-cuenta-btn" data-id="${cuenta.id}">Eliminar</button>` : ''}
                     </li>
                 `);
                 listaCuentas.append(listItem);
             });
         } else {
             listaCuentas.append('<li>No hay cuentas asociadas con este asiento.</li>');
+        }
+    
+        // Si el asiento está cerrado, deshabilitamos las acciones
+        if (asiento.estado === 'Cerrado') {
+            deshabilitarFormulario();  // Deshabilitar los botones para agregar cuentas y otros campos
         }
     }
 
